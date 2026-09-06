@@ -1,0 +1,21 @@
+# Verified installable and working in this environment as of Phase 5 —
+# versions bumped from the Phase 1 draft to what was actually tested end
+# to end (see ai-services/README.md).
+fastapi==0.141.1
+uvicorn[standard]==0.52.1
+pydantic==2.13.4
+pydantic-settings==2.15.0
+vosk==0.3.45
+librosa==0.11.0
+numpy==2.4.4
+scipy==1.17.1
+soundfile==0.14.0
+python-multipart==0.0.32
+python-dotenv==1.2.2
+scikit-learn==1.8.0
+joblib==1.5.3
+
+# Not yet used by any endpoint — reserved for Phase 6 (HeatmapService
+# reading Report/SOSLog data directly from MongoDB) and RAG-chatbot work.
+motor==3.5.1
+httpx==0.28.1

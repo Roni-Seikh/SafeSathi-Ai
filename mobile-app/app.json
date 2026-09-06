@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "SafeSathi",
+    "slug": "safesathi",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "safesathi",
+    "splash": {
+      "image": "./src/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0D16"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.safesathi.ai",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SafeSathi needs your location to trigger SOS with your position and to recommend safer routes.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "SafeSathi watches for danger signals in the background, which requires location access even when the app isn't open.",
+        "NSMicrophoneUsageDescription": "SafeSathi listens for emergency keywords like \"Help\" or \"Bachao\" to trigger SOS automatically.",
+        "NSCameraUsageDescription": "SafeSathi captures photo evidence during an active SOS.",
+        "UIBackgroundModes": ["location", "audio", "fetch", "remote-notification"]
+      }
+    },
+    "android": {
+      "package": "com.safesathi.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "backgroundColor": "#0A0D16"
+      },
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECORD_AUDIO",
+        "CAMERA",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "SafeSathi watches for danger signals in the background, which requires location access even when the app isn't open."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./src/assets/notification-icon.png",
+          "color": "#6C7BFF"
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "feature_names": [
+    "accel_mean",
+    "accel_peak",
+    "accel_variance",
+    "accel_peak_to_mean",
+    "gyro_mean",
+    "gyro_peak",
+    "gyro_variance",
+    "gyro_peak_to_mean"
+  ],
+  "class_labels": [
+    "normal",
+    "running",
+    "phone_snatch",
+    "violent_movement",
+    "sudden_fall"
+  ],
+  "trained_on": "synthetic data \u2014 see docstring at the top of this script",
+  "samples_per_class": 600,
+  "test_accuracy": 0.9766666666666667,
+  "cv_accuracy_mean": 0.9753333333333334,
+  "cv_accuracy_std": 0.0050990195135927775,
+  "per_class_f1": {
+    "normal": 1.0,
+    "running": 0.9915966386554622,
+    "phone_snatch": 0.9620253164556962,
+    "violent_movement": 0.9547325102880658,
+    "sudden_fall": 0.9752066115702479
+  }
+}

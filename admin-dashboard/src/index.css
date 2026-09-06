@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-paper text-ink-900 font-sans;
+  }
+  ::selection {
+    @apply bg-signal-blueDim;
+  }
+  :focus-visible {
+    outline: 2px solid #1E5FA8;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .field-label {
+    @apply block text-[13px] font-medium text-slate-muted mb-1.5;
+  }
+  .field-input {
+    @apply w-full rounded-md border border-line bg-white px-3 py-2 text-[14px] text-ink-900
+      placeholder:text-slate-muted/70 focus:border-ink-600 focus:ring-1 focus:ring-ink-600
+      disabled:bg-paper disabled:text-slate-muted transition-colors;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-ink-800 px-4 py-2
+      text-[14px] font-medium text-white hover:bg-ink-700 disabled:opacity-40
+      disabled:cursor-not-allowed transition-colors;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-4 py-2
+      text-[14px] font-medium text-ink-900 hover:bg-paper disabled:opacity-40
+      disabled:cursor-not-allowed transition-colors;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-signal-red px-4 py-2
+      text-[14px] font-medium text-white hover:bg-signal-red/90 disabled:opacity-40 transition-colors;
+  }
+  .panel {
+    @apply rounded-lg border border-line bg-white shadow-panel;
+  }
+}
