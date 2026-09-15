@@ -15,10 +15,10 @@ interface UseAuthResult {
  * (mounted at the root in App.tsx). When a Firebase session appears, it
  * asks the backend to sync/return the matching SafeSathi profile.
  *
- * A NOT_FOUND response means this Firebase identity has verified an OTP
- * but never finished POST /auth/register — RootNavigator treats that as
+ * A NOT_FOUND response means this Firebase identity signed up/in but
+ * never finished POST /auth/register — RootNavigator treats that as
  * "still mid-registration" rather than "logged in", by leaving the Redux
- * auth status at its default until OTPVerifyScreen completes registration.
+ * auth status at its default until RegisterScreen completes registration.
  */
 export function useAuth(): UseAuthResult {
   const dispatch = useAppDispatch();
@@ -37,7 +37,7 @@ export function useAuth(): UseAuthResult {
       }
 
       // Already synced this session (e.g. just completed registration in
-      // OTPVerifyScreen) — avoid an extra round trip.
+      // RegisterScreen) — avoid an extra round trip.
       if (authStatus === 'authenticated') {
         setIsInitializing(false);
         return;
@@ -46,8 +46,8 @@ export function useAuth(): UseAuthResult {
       try {
         await dispatch(loginWithBackend()).unwrap();
       } catch (error) {
-        // NOT_FOUND is expected mid-registration (OTP verified, backend
-        // profile not created yet) — anything else, fall back to signed-out.
+        // NOT_FOUND is expected mid-registration (Firebase account created,
+        // backend profile not created yet) — anything else, fall back to signed-out.
         if (!(error instanceof ApiRequestError && error.code === 'NOT_FOUND')) {
           dispatch(setUnauthenticated());
         }

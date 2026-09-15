@@ -1,7 +1,6 @@
 export type AuthStackParamList = {
   Onboarding: undefined;
   Register: undefined;
-  OTPVerify: { phone: string; flow: 'register' | 'login'; verificationId: string; name?: string; email?: string };
   Login: undefined;
 };
 

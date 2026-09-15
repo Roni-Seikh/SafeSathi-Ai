@@ -26,7 +26,6 @@
     "@react-navigation/native-stack": "^6.10.0",
     "@react-navigation/bottom-tabs": "^6.6.1",
     "firebase": "^10.12.5",
-    "expo-firebase-recaptcha": "^2.3.1",
     "axios": "^1.7.4",
     "expo-location": "~17.0.1",
     "expo-sensors": "~13.0.9",
