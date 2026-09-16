@@ -21,6 +21,7 @@ app.include_router(safescore.router)
 
 
 @app.get("/health")
+@app.head("/health")
 async def health() -> dict:
     from app.services.motion_classifier_service import motion_classifier_service
     from app.services.vosk_keyword_service import vosk_keyword_service
