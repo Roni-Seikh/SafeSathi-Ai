@@ -12,7 +12,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#0A0D16"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.safesathi.ai",
@@ -21,7 +23,12 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "SafeSathi watches for danger signals in the background, which requires location access even when the app isn't open.",
         "NSMicrophoneUsageDescription": "SafeSathi listens for emergency keywords like \"Help\" or \"Bachao\" to trigger SOS automatically.",
         "NSCameraUsageDescription": "SafeSathi captures photo evidence during an active SOS.",
-        "UIBackgroundModes": ["location", "audio", "fetch", "remote-notification"]
+        "UIBackgroundModes": [
+          "location",
+          "audio",
+          "fetch",
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -53,6 +60,15 @@
           "color": "#6C7BFF"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "defaultVoiceDetectionEnabled": false,
+      "defaultMotionDetectionEnabled": false,
+      "defaultAutoSosEnabled": false,
+      "eas": {
+        "projectId": "02751af5-08ea-4a7f-ace5-2982dc94da07"
+      }
+    },
+    "owner": "roniseikh"
   }
 }

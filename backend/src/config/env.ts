@@ -45,5 +45,5 @@ function loadEnv(): Env {
 export const env = loadEnv();
 
 export const corsOrigins = env.CORS_ORIGIN.split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
   .filter(Boolean);
