@@ -14,22 +14,30 @@ cd "$MODELS_DIR"
 download_and_extract() {
   local name="$1"
   local url="$2"
-  if [ -d "$name" ]; then
-    echo "✓ $name already present, skipping"
+  local final_name="$3"
+  if [ -d "$final_name" ]; then
+    echo "✓ $final_name already present, skipping"
     return
   fi
   echo "Downloading $name..."
   curl -L -o "${name}.zip" "$url"
   unzip -q "${name}.zip"
   rm "${name}.zip"
-  echo "✓ $name ready at $MODELS_DIR/$name"
+  # The zip extracts to a versioned folder (e.g. vosk-model-small-en-us-0.15),
+  # but .env.example and VoskKeywordService both expect the version-less
+  # name below — rename so the configured VOSK_MODEL_PATH_* env vars
+  # resolve without any further changes.
+  mv "$name" "$final_name"
+  echo "✓ $final_name ready at $MODELS_DIR/$final_name"
 }
 
 download_and_extract "vosk-model-small-en-us-0.15" \
-  "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
+  "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip" \
+  "vosk-model-small-en-us"
 
 download_and_extract "vosk-model-small-hi-0.22" \
-  "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip"
+  "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip" \
+  "vosk-model-small-hi"
 
 cat <<'EOF'
 

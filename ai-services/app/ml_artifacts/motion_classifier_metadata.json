@@ -16,7 +16,7 @@
     "violent_movement",
     "sudden_fall"
   ],
-  "trained_on": "synthetic data \u2014 see docstring at the top of this script",
+  "trained_on": "synthetic data \u2014 see section 2 of this notebook for the reasoning",
   "samples_per_class": 600,
   "test_accuracy": 0.9766666666666667,
   "cv_accuracy_mean": 0.9753333333333334,
