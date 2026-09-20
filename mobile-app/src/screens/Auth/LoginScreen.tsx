@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types/navigation.types';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
+import { PasswordField } from '../../components/PasswordField';
 import { Button } from '../../components/Button';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { AuthHeader } from '../../components/AuthHeader';
+import { FadeInUp } from '../../components/FadeInUp';
+import { MathCaptcha } from '../../components/MathCaptcha';
 import { colors, spacing, typography } from '../../constants/theme';
 import { loginWithEmail, getAuthErrorMessage } from '../../services/emailAuth';
 import { useAppDispatch } from '../../store/hooks';
@@ -21,6 +25,8 @@ export function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaValid, setCaptchaValid] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
 
   async function handleLogin() {
     if (!EMAIL_REGEX.test(email)) {
@@ -29,6 +35,10 @@ export function LoginScreen({ navigation }: Props) {
     }
     if (password.length < 6) {
       setError('Please enter your password.');
+      return;
+    }
+    if (!captchaValid) {
+      setError('Please solve the check above to continue.');
       return;
     }
     setError(null);
@@ -43,6 +53,7 @@ export function LoginScreen({ navigation }: Props) {
       // auth.status becomes 'authenticated' — no explicit navigation here.
     } catch (err) {
       setError(getAuthErrorMessage(err));
+      setFailedAttempts((n) => n + 1); // forces MathCaptcha to regenerate
     } finally {
       setSubmitting(false);
     }
@@ -50,57 +61,63 @@ export function LoginScreen({ navigation }: Props) {
 
   return (
     <ScreenContainer scroll>
-      <View style={styles.header}>
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Log in with your email and password.</Text>
-      </View>
+      <AuthHeader title="Welcome back" subtitle="Log in with your email and password." />
 
-      {error ? <ErrorBanner message={error} /> : null}
+      {error ? (
+        <FadeInUp>
+          <ErrorBanner message={error} />
+        </FadeInUp>
+      ) : null}
 
-      <TextField
-        label="Email"
-        placeholder="you@example.com"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        autoComplete="email"
-      />
-      <TextField
-        label="Password"
-        placeholder="********"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoComplete="password"
-      />
+      <FadeInUp delay={60}>
+        <TextField
+          label="Email"
+          placeholder="you@example.com"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+        />
+      </FadeInUp>
 
-      <Button label="Log in" onPress={() => void handleLogin()} loading={submitting} style={styles.submit} />
+      <FadeInUp delay={120}>
+        <PasswordField
+          label="Password"
+          placeholder="Your password"
+          value={password}
+          onChangeText={setPassword}
+          autoComplete="password"
+        />
+      </FadeInUp>
 
-      <Text style={styles.footerText}>
-        New here?{' '}
-        <Text style={styles.link} onPress={() => navigation.navigate('Register')}>
-          Create an account
+      <FadeInUp delay={180}>
+        <MathCaptcha onValidChange={setCaptchaValid} regenerateOn={failedAttempts} />
+      </FadeInUp>
+
+      <FadeInUp delay={240}>
+        <Button
+          label="Log in"
+          onPress={() => void handleLogin()}
+          loading={submitting}
+          disabled={!captchaValid}
+          style={styles.submit}
+        />
+      </FadeInUp>
+
+      <FadeInUp delay={280}>
+        <Text style={styles.footerText}>
+          New here?{' '}
+          <Text style={styles.link} onPress={() => navigation.navigate('Register')}>
+            Create an account
+          </Text>
         </Text>
-      </Text>
+      </FadeInUp>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
   submit: {
     marginTop: spacing.sm,
   },
@@ -109,6 +126,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.lg,
+    marginBottom: spacing.xl,
   },
   link: {
     color: colors.primary,
