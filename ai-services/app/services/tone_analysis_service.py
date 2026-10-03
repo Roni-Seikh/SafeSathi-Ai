@@ -1,31 +1,38 @@
 from __future__ import annotations
 
 import io
+import json
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 
+import joblib
 import librosa
 import numpy as np
 import soundfile as sf
 
 from app.core.logging import logger
+from app.core.settings import settings
 from app.utils.audio import transcode_to_wav_via_ffmpeg
 
-# Below this RMS, treat the clip as silence/noise rather than guessing.
+# Below this RMS, treat the clip as silence/noise rather than guessing —
+# and rather than asking the trained model to make a call it was never
+# trained to make (see notebooks/02_tone_classifier.ipynb for why "silence"
+# isn't one of its classes).
 MIN_RMS_FOR_ANALYSIS = 1e-4
 
-# Empirically-reasoned thresholds, not learned from a labeled dataset (none
-# is available — see ai-services/README.md for the honest reasoning and
-# what would improve this). Pitch, loudness, and spectral centroid are
-# well-established acoustic correlates of screaming in the voice-science
-# literature, which is why this is a defensible heuristic baseline rather
-# than a fabricated "trained model."
-SCREAM_PITCH_FLOOR_HZ = 300.0
-SCREAM_PITCH_CEILING_HZ = 1000.0
-SCREAM_LOUDNESS_FLOOR_DB = -20.0
-SCREAM_LOUDNESS_CEILING_DB = 0.0
-FEAR_JITTER_FLOOR = 0.15  # coefficient of variation of f0 over the clip
-FEAR_JITTER_CEILING = 0.45
+# Only used if the trained model artifact is missing — a crude safety net
+# matching the fallback pattern in motion_classifier_service.py, not a
+# substitute for running notebooks/02_tone_classifier.ipynb. Same
+# empirically-reasoned thresholds this service used before the model
+# existed; see that notebook's section 2 for the full reasoning, now
+# expressed as trainable distributions instead of hand-set cutoffs.
+FALLBACK_SCREAM_PITCH_FLOOR_HZ = 300.0
+FALLBACK_SCREAM_PITCH_CEILING_HZ = 1000.0
+FALLBACK_SCREAM_LOUDNESS_FLOOR_DB = -20.0
+FALLBACK_SCREAM_LOUDNESS_CEILING_DB = 0.0
+FALLBACK_FEAR_JITTER_FLOOR = 0.15
+FALLBACK_FEAR_JITTER_CEILING = 0.45
 
 
 @dataclass
@@ -46,7 +53,46 @@ def _normalize(value: Optional[float], floor: float, ceiling: float) -> float:
 class ToneAnalysisService:
     """Scores an audio clip for scream/fear likelihood from pitch,
     loudness, and spectral shape. Expects WAV/PCM (see ai-services/README.md
-    for why — reliable decoding without extra native codec dependencies)."""
+    for why — reliable decoding without extra native codec dependencies).
+
+    Feature extraction (pitch, loudness, spectral centroid, jitter) is
+    unconditional — always computed the same way. The *decision* layer
+    uses a trained RandomForestClassifier (see
+    notebooks/02_tone_classifier.ipynb) when its artifact is present, and
+    falls back to the original fixed-threshold formula only if it's
+    missing — matching the exact pattern in motion_classifier_service.py.
+    """
+
+    def __init__(self, model_path: str, metadata_path: str) -> None:
+        self._model = None
+        self._feature_names: list[str] = []
+        self._class_labels: list[str] = []
+
+        model_file = Path(model_path)
+        metadata_file = Path(metadata_path)
+
+        if not model_file.exists() or not metadata_file.exists():
+            logger.warning(
+                "Tone classifier artifacts not found at %s — run "
+                "`jupyter notebook notebooks/02_tone_classifier.ipynb` first. "
+                "Falling back to a fixed-threshold formula until then.",
+                model_path,
+            )
+            return
+
+        self._model = joblib.load(model_file)
+        metadata = json.loads(metadata_file.read_text())
+        self._feature_names = metadata["feature_names"]
+        self._class_labels = metadata["class_labels"]
+        logger.info(
+            "Loaded tone classifier (test_accuracy=%.3f, cv_accuracy=%.3f)",
+            metadata.get("test_accuracy", float("nan")),
+            metadata.get("cv_accuracy_mean", float("nan")),
+        )
+
+    @property
+    def is_trained_model_loaded(self) -> bool:
+        return self._model is not None
 
     def analyze(self, audio_bytes: bytes) -> ToneResult:
         y, sr = self._load_audio(audio_bytes)
@@ -61,23 +107,19 @@ class ToneAnalysisService:
             return ToneResult(None, None, 0.0, 0.0)
 
         loudness_db = float(librosa.amplitude_to_db(np.array([mean_rms]), ref=1.0)[0])
-
         pitch_hz, pitch_jitter = self._estimate_pitch(y, sr)
 
         spectral_centroid = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
         mean_centroid = float(np.mean(spectral_centroid)) if spectral_centroid.size else 0.0
-        # Normalized against a fraction of Nyquist so this is roughly
-        # sample-rate independent rather than tuned to one specific sr.
-        centroid_score = _normalize(mean_centroid, sr * 0.05, sr * 0.25)
 
-        pitch_score = _normalize(pitch_hz, SCREAM_PITCH_FLOOR_HZ, SCREAM_PITCH_CEILING_HZ)
-        loudness_score = _normalize(loudness_db, SCREAM_LOUDNESS_FLOOR_DB, SCREAM_LOUDNESS_CEILING_DB)
-
-        scream_probability = float(
-            np.clip(0.45 * pitch_score + 0.35 * loudness_score + 0.20 * centroid_score, 0.0, 1.0)
-        )
-        jitter_score = _normalize(pitch_jitter, FEAR_JITTER_FLOOR, FEAR_JITTER_CEILING)
-        fear_probability = float(np.clip(0.5 * jitter_score + 0.5 * loudness_score, 0.0, 1.0))
+        if self._model is not None:
+            scream_probability, fear_probability = self._classify_with_model(
+                pitch_hz, loudness_db, mean_centroid, pitch_jitter
+            )
+        else:
+            scream_probability, fear_probability = self._classify_with_fallback_thresholds(
+                pitch_hz, loudness_db, mean_centroid, pitch_jitter, sr
+            )
 
         return ToneResult(
             pitch_hz=pitch_hz,
@@ -85,6 +127,30 @@ class ToneAnalysisService:
             scream_probability=scream_probability,
             fear_probability=fear_probability,
         )
+
+    def _classify_with_model(
+        self, pitch_hz: Optional[float], loudness_db: float, spectral_centroid_hz: float, pitch_jitter: float
+    ) -> Tuple[float, float]:
+        features = np.array([[pitch_hz or 0.0, loudness_db, spectral_centroid_hz, pitch_jitter]])
+        probabilities = self._model.predict_proba(features)[0]
+        class_probabilities: Dict[str, float] = dict(zip(self._model.classes_, probabilities.tolist()))
+        return (
+            class_probabilities.get("scream", 0.0),
+            class_probabilities.get("fear_distress", 0.0),
+        )
+
+    @staticmethod
+    def _classify_with_fallback_thresholds(
+        pitch_hz: Optional[float], loudness_db: float, spectral_centroid_hz: float, pitch_jitter: float, sr: int
+    ) -> Tuple[float, float]:
+        centroid_score = _normalize(spectral_centroid_hz, sr * 0.05, sr * 0.25)
+        pitch_score = _normalize(pitch_hz, FALLBACK_SCREAM_PITCH_FLOOR_HZ, FALLBACK_SCREAM_PITCH_CEILING_HZ)
+        loudness_score = _normalize(loudness_db, FALLBACK_SCREAM_LOUDNESS_FLOOR_DB, FALLBACK_SCREAM_LOUDNESS_CEILING_DB)
+        scream_probability = float(np.clip(0.45 * pitch_score + 0.35 * loudness_score + 0.20 * centroid_score, 0.0, 1.0))
+
+        jitter_score = _normalize(pitch_jitter, FALLBACK_FEAR_JITTER_FLOOR, FALLBACK_FEAR_JITTER_CEILING)
+        fear_probability = float(np.clip(0.5 * jitter_score + 0.5 * loudness_score, 0.0, 1.0))
+        return scream_probability, fear_probability
 
     @staticmethod
     def _estimate_pitch(y: np.ndarray, sr: int) -> Tuple[Optional[float], float]:
@@ -124,4 +190,4 @@ class ToneAnalysisService:
         return data.astype(np.float32), sr
 
 
-tone_analysis_service = ToneAnalysisService()
+tone_analysis_service = ToneAnalysisService(settings.tone_classifier_path, settings.tone_classifier_metadata_path)

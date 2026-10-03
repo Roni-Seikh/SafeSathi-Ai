@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation.types';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -7,6 +7,8 @@ import { TextField } from '../../components/TextField';
 import { ToggleRow } from '../../components/ToggleRow';
 import { Button } from '../../components/Button';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { AnimatedPressable } from '../../components/AnimatedPressable';
+import { FadeInUp } from '../../components/FadeInUp';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { updateMedicalInfoThunk } from '../../store/slices/authSlice';
@@ -60,41 +62,50 @@ export function MedicalInfoScreen({ navigation }: Props) {
     <ScreenContainer scroll>
       {error ? <ErrorBanner message={error} /> : null}
 
-      <Text style={styles.sectionLabel}>Blood group</Text>
-      <View style={styles.chipRow}>
-        {BLOOD_GROUPS.map((group) => (
-          <Pressable
-            key={group}
-            onPress={() => setBloodGroup(group)}
-            style={[styles.chip, bloodGroup === group && styles.chipSelected]}
-          >
-            <Text style={[styles.chipText, bloodGroup === group && styles.chipTextSelected]}>{group}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <FadeInUp>
+        <Text style={styles.sectionLabel}>Blood group</Text>
+        <View style={styles.chipRow}>
+          {BLOOD_GROUPS.map((group) => (
+            <AnimatedPressable
+              key={group}
+              onPress={() => setBloodGroup(group)}
+              style={[styles.chip, bloodGroup === group && styles.chipSelected]}
+              scaleTo={0.92}
+              accessibilityRole="button"
+              accessibilityLabel={group}
+            >
+              <Text style={[styles.chipText, bloodGroup === group && styles.chipTextSelected]}>{group}</Text>
+            </AnimatedPressable>
+          ))}
+        </View>
+      </FadeInUp>
 
-      <TextField
-        label="Allergies (comma separated)"
-        value={allergies}
-        onChangeText={setAllergies}
-        placeholder="e.g. Penicillin, Peanuts"
-      />
-      <TextField
-        label="Existing conditions (comma separated)"
-        value={conditions}
-        onChangeText={setConditions}
-        placeholder="e.g. Asthma"
-      />
-      <TextField
-        label="Current medications (comma separated)"
-        value={medications}
-        onChangeText={setMedications}
-        placeholder="e.g. Inhaler"
-      />
+      <FadeInUp delay={80}>
+        <TextField
+          label="Allergies (comma separated)"
+          value={allergies}
+          onChangeText={setAllergies}
+          placeholder="e.g. Penicillin, Peanuts"
+        />
+        <TextField
+          label="Existing conditions (comma separated)"
+          value={conditions}
+          onChangeText={setConditions}
+          placeholder="e.g. Asthma"
+        />
+        <TextField
+          label="Current medications (comma separated)"
+          value={medications}
+          onChangeText={setMedications}
+          placeholder="e.g. Inhaler"
+        />
 
-      <ToggleRow label="Organ donor" value={organDonor} onValueChange={setOrganDonor} />
+        <ToggleRow label="Organ donor" value={organDonor} onValueChange={setOrganDonor} />
+      </FadeInUp>
 
-      <Button label="Save changes" onPress={() => void handleSave()} loading={saving} style={styles.save} />
+      <FadeInUp delay={140}>
+        <Button label="Save changes" onPress={() => void handleSave()} loading={saving} style={styles.save} />
+      </FadeInUp>
     </ScreenContainer>
   );
 }

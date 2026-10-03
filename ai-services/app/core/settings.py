@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     # Vosk model paths — see ai-services/README.md for what's actually
     # downloadable right now (English and Hindi; Bengali is a documented
     # upstream gap, not a bug here).
-    vosk_model_path_en: str = "./models/vosk-model-small-en-us-0.15"
-    vosk_model_path_hi: str = "./models/vosk-model-small-hi-0.22"
+    vosk_model_path_en: str = "./models/vosk-model-small-en-us"
+    vosk_model_path_hi: str = "./models/vosk-model-small-hi"
     vosk_model_path_bn: str = "./models/vosk-model-small-bn"
 
     # SafeScore factor weights — see docs/architecture/SAFESCORE_ALGORITHM.md.
@@ -28,8 +28,11 @@ class Settings(BaseSettings):
     safescore_weight_reports: float = 0.20
     safescore_weight_trust: float = 0.15
 
-    motion_classifier_path: str = "./app/ml_artifacts/motion_classifier.joblib"
+    motion_classifier_path: str = "./app/ml_artifacts/motion_classifier.pkl"
     motion_classifier_metadata_path: str = "./app/ml_artifacts/motion_classifier_metadata.json"
+
+    tone_classifier_path: str = "./app/ml_artifacts/tone_classifier.pkl"
+    tone_classifier_metadata_path: str = "./app/ml_artifacts/tone_classifier_metadata.json"
 
 
 settings = Settings()

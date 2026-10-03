@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AlertTriangle, Navigation } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation.types';
 import { Button } from '../../components/Button';
+import { PulseDot } from '../../components/PulseDot';
 import { colors, spacing, typography } from '../../constants/theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchActiveSOS, markFalseAlarmThunk, sendImSafeThunk } from '../../store/slices/sosSlice';
@@ -17,11 +18,25 @@ export function SOSActiveScreen({ navigation }: Props) {
   const active = useAppSelector((state) => state.sos.active);
   const [busy, setBusy] = React.useState<'im_safe' | 'false_alarm' | null>(null);
 
+  const entrance = useRef(new Animated.Value(0)).current;
+  const ringPulse = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     if (!active) {
       dispatch(fetchActiveSOS());
     }
   }, [active, dispatch]);
+
+  useEffect(() => {
+    Animated.timing(entrance, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(ringPulse, { toValue: 1, duration: 1300, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(ringPulse, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.delay(200),
+      ])
+    ).start();
+  }, [entrance, ringPulse]);
 
   // The backend already auto-started sharing with linked contacts the
   // moment SOS was triggered (see SOSService.trigger); this is the sender
@@ -49,34 +64,49 @@ export function SOSActiveScreen({ navigation }: Props) {
     }
   }
 
+  const ringScale = ringPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] });
+  const ringOpacity = ringPulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] });
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" backgroundColor={colors.danger} />
 
-      <View style={styles.header}>
-        <AlertTriangle size={40} color={colors.textOnDanger} />
-        <Text style={styles.title}>SOS ACTIVE</Text>
-        <Text style={styles.subtitle}>Your emergency contacts have been notified.</Text>
-      </View>
+      <Animated.View style={{ opacity: entrance }}>
+        <View style={styles.header}>
+          <View style={styles.iconWrap}>
+            <Animated.View style={[styles.ring, { opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
+            <View style={styles.iconBadge}>
+              <AlertTriangle size={36} color={colors.textOnDanger} />
+            </View>
+          </View>
+          <Text style={styles.title}>SOS ACTIVE</Text>
+          <Text style={styles.subtitle}>Your emergency contacts have been notified.</Text>
+        </View>
 
-      <View style={styles.trackingPanel}>
-        <Navigation size={22} color={colors.textOnDanger} />
-        <Text style={styles.trackingTitle}>{isTracking ? 'Sharing your live location' : 'Starting location sharing…'}</Text>
-        <Text style={styles.trackingBody}>
-          {lastSentAt
-            ? `Last update sent ${lastSentAt.toLocaleTimeString()}`
-            : 'Your contacts can open your live location from the alert they received.'}
-        </Text>
-        {trackingError ? <Text style={styles.trackingError}>{trackingError}</Text> : null}
-      </View>
+        <View style={styles.trackingPanel}>
+          <Navigation size={22} color={colors.textOnDanger} />
+          <View style={styles.trackingTitleRow}>
+            {isTracking ? <PulseDot color={colors.textOnDanger} size={7} /> : null}
+            <Text style={styles.trackingTitle}>
+              {isTracking ? 'Sharing your live location' : 'Starting location sharing…'}
+            </Text>
+          </View>
+          <Text style={styles.trackingBody}>
+            {lastSentAt
+              ? `Last update sent ${lastSentAt.toLocaleTimeString()}`
+              : 'Your contacts can open your live location from the alert they received.'}
+          </Text>
+          {trackingError ? <Text style={styles.trackingError}>{trackingError}</Text> : null}
+        </View>
 
-      {active ? (
-        <Text style={styles.meta}>
-          Triggered {new Date(active.triggeredAt).toLocaleTimeString()} · {active.triggerType.replace('_', ' ')}
-        </Text>
-      ) : null}
+        {active ? (
+          <Text style={styles.meta}>
+            Triggered {new Date(active.triggeredAt).toLocaleTimeString()} · {active.triggerType.replace('_', ' ')}
+          </Text>
+        ) : null}
+      </Animated.View>
 
-      <View style={styles.actions}>
+      <Animated.View style={[styles.actions, { opacity: entrance }]}>
         <Button label="I'm Safe Now" onPress={() => void handleImSafe()} loading={busy === 'im_safe'} disabled={busy !== null} />
         <Button
           label="False Alarm"
@@ -86,10 +116,12 @@ export function SOSActiveScreen({ navigation }: Props) {
           disabled={busy !== null}
           style={styles.secondaryAction}
         />
-      </View>
+      </Animated.View>
     </View>
   );
 }
+
+const ICON_SIZE = 72;
 
 const styles = StyleSheet.create({
   container: {
@@ -102,6 +134,28 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
+  },
+  iconWrap: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  ring: {
+    position: 'absolute',
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    borderRadius: ICON_SIZE / 2,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  iconBadge: {
+    width: ICON_SIZE * 0.78,
+    height: ICON_SIZE * 0.78,
+    borderRadius: (ICON_SIZE * 0.78) / 2,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     ...typography.displayLarge,
@@ -117,7 +171,6 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   trackingPanel: {
-    flex: 1,
     marginVertical: spacing.xl,
     borderRadius: 20,
     borderWidth: 1,
@@ -126,12 +179,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
     gap: spacing.xs,
+  },
+  trackingTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   trackingTitle: {
     ...typography.h3,
     color: colors.textOnDanger,
-    marginTop: spacing.sm,
     textAlign: 'center',
   },
   trackingBody: {

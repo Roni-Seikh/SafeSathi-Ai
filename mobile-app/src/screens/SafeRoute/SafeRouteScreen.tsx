@@ -10,6 +10,7 @@ import { Button } from '../../components/Button';
 import { ErrorBanner } from '../../components/ErrorBanner';
 import { EmptyState } from '../../components/EmptyState';
 import { RiskBadge, riskLevelFromSafeScore } from '../../components/RiskBadge';
+import { FadeInUp } from '../../components/FadeInUp';
 import { colors, spacing, typography } from '../../constants/theme';
 import { getSafeRoute } from '../../services/routeApi';
 import { getCurrentGeoPoint, getBatteryLevelPercent, ensureLocationPermission } from '../../services/location';
@@ -62,20 +63,24 @@ export function SafeRouteScreen(_props: Props) {
 
   return (
     <ScreenContainer>
-      <TextField
-        label="Destination"
-        placeholder="Search for an address or place"
-        value={destination}
-        onChangeText={setDestination}
-        returnKeyType="search"
-        onSubmitEditing={() => void handleSearch()}
-      />
-      <Button label="Find Safe Route" onPress={() => void handleSearch()} loading={searching} style={styles.searchButton} />
+      <FadeInUp>
+        <TextField
+          label="Destination"
+          placeholder="Search for an address or place"
+          value={destination}
+          onChangeText={setDestination}
+          returnKeyType="search"
+          onSubmitEditing={() => void handleSearch()}
+        />
+        <Button label="Find Safe Route" onPress={() => void handleSearch()} loading={searching} style={styles.searchButton} />
+      </FadeInUp>
 
       {error ? <ErrorBanner message={error} /> : null}
 
       {routes && routes.length === 0 ? (
-        <EmptyState title="No routes found" message="Try a different destination." />
+        <FadeInUp delay={60}>
+          <EmptyState title="No routes found" message="Try a different destination." />
+        </FadeInUp>
       ) : null}
 
       {routes && routes.length > 0 ? (
@@ -84,15 +89,17 @@ export function SafeRouteScreen(_props: Props) {
           keyExtractor={(_item, index) => `route-${index}`}
           contentContainerStyle={styles.list}
           renderItem={({ item, index }) => (
-            <GlassCard style={styles.routeCard}>
-              <View style={styles.routeHeader}>
-                <Text style={styles.routeLabel}>{index === 0 ? 'Recommended route' : `Route ${index + 1}`}</Text>
-                <RiskBadge level={riskLevelFromSafeScore(item.safeScore)} label={`SafeScore ${item.safeScore}`} />
-              </View>
-              <Text style={styles.routeMeta}>
-                {(item.distanceMeters / 1000).toFixed(1)} km · {Math.round(item.estimatedDurationSeconds / 60)} min walk
-              </Text>
-            </GlassCard>
+            <FadeInUp delay={Math.min(index * 60, 300)}>
+              <GlassCard style={styles.routeCard}>
+                <View style={styles.routeHeader}>
+                  <Text style={styles.routeLabel}>{index === 0 ? 'Recommended route' : `Route ${index + 1}`}</Text>
+                  <RiskBadge level={riskLevelFromSafeScore(item.safeScore)} label={`SafeScore ${item.safeScore}`} />
+                </View>
+                <Text style={styles.routeMeta}>
+                  {(item.distanceMeters / 1000).toFixed(1)} km · {Math.round(item.estimatedDurationSeconds / 60)} min walk
+                </Text>
+              </GlassCard>
+            </FadeInUp>
           )}
           ListFooterComponent={
             <Text style={styles.footerNote}>

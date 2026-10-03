@@ -65,6 +65,14 @@ export interface UseVoiceDetectorResult {
   isListening: boolean;
   lastEvent: VoiceDetectorEvent | null;
   error: string | null;
+  /** Peak dBFS metering seen in the most recently completed segment —
+   * exposed so a debug UI (or a console.log while testing on a real
+   * device) can show whether the mic is actually registering your voice
+   * at all, separately from whether it clears METERING_TRIGGER_DBFS. If
+   * this stays at -160 while you're speaking at normal volume, metering
+   * updates aren't reaching the app — see the on-device debugging note
+   * in this hook's file-level comment. */
+  lastPeakDbfs: number | null;
 }
 
 /**
@@ -89,6 +97,7 @@ export function useVoiceDetector(
   const [isListening, setIsListening] = useState(false);
   const [lastEvent, setLastEvent] = useState<VoiceDetectorEvent | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastPeakDbfs, setLastPeakDbfs] = useState<number | null>(null);
   const onSOSTriggeredRef = useRef(onSOSTriggered);
 
   useEffect(() => {
@@ -122,6 +131,12 @@ export function useVoiceDetector(
       activeRecording = recording;
 
       await recording.prepareToRecordAsync(RECORDING_OPTIONS);
+      // Explicit, short polling interval — without this, metering updates
+      // ride on expo-av's default interval, which isn't guaranteed frequent
+      // enough to catch a brief spoken word inside a 4s segment. This was
+      // the most likely reason peakDbfs could sit at -160 (its initial
+      // value) for an entire segment even while you were speaking.
+      await recording.setProgressUpdateInterval(150);
       recording.setOnRecordingStatusUpdate((status) => {
         if (typeof status.metering === 'number' && status.metering > peakDbfs) {
           peakDbfs = status.metering;
@@ -161,6 +176,8 @@ export function useVoiceDetector(
 
         if (cancelled || !uri) continue;
 
+        setLastPeakDbfs(peakDbfs);
+
         if (peakDbfs < METERING_TRIGGER_DBFS) {
           await FileSystem.deleteAsync(uri, { idempotent: true });
           continue;
@@ -169,14 +186,20 @@ export function useVoiceDetector(
         try {
           const [location, batteryLevel] = await Promise.all([getCurrentGeoPoint(), getBatteryLevelPercent()]);
           const { voiceLog, sosTriggered } = await submitVoiceLog({ fileUri: uri, language, location, batteryLevel });
+          setError(null);
           setLastEvent({
             keyword: voiceLog.detectedKeyword,
             screamProbability: voiceLog.toneAnalysis.screamProbability,
             at: new Date(),
           });
           if (sosTriggered) onSOSTriggeredRef.current();
-        } catch {
-          // Upload failure isn't fatal — the next segment tries again.
+        } catch (err) {
+          // Previously silent — a failed upload (network error, backend
+          // down, AI service unreachable) looked identical to "nothing
+          // loud enough happened yet." Surfacing it doesn't stop the loop
+          // (the next segment still retries), but now it's visible instead
+          // of an invisible dead end.
+          setError(err instanceof Error ? `Voice log upload failed: ${err.message}` : 'Voice log upload failed.');
         } finally {
           await FileSystem.deleteAsync(uri, { idempotent: true });
         }
@@ -194,5 +217,5 @@ export function useVoiceDetector(
     };
   }, [enabled, language]);
 
-  return { isListening, lastEvent, error };
+  return { isListening, lastEvent, error, lastPeakDbfs };
 }

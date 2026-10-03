@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
-import { Pressable, Text, StyleSheet } from 'react-native';
-import { colors, radii, spacing, typography, glassCardStyle } from '../constants/theme';
+import { Text, StyleSheet } from 'react-native';
+import { colors, spacing, typography, glassCardStyle } from '../constants/theme';
+import { AnimatedPressable } from './AnimatedPressable';
 
 interface PrimaryActionTileProps {
   label: string;
@@ -10,14 +11,10 @@ interface PrimaryActionTileProps {
 
 export function PrimaryActionTile({ label, icon, onPress }: PrimaryActionTileProps) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
-      accessibilityRole="button"
-    >
+    <AnimatedPressable onPress={onPress} style={styles.tile} accessibilityRole="button" accessibilityLabel={label}>
       {icon}
       <Text style={styles.label}>{label}</Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -29,11 +26,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  pressed: {
-    backgroundColor: colors.glassFillStrong,
-  },
   label: {
     ...typography.bodyMedium,
     color: colors.textPrimary,
+    textAlign: 'center',
   },
 });

@@ -9,6 +9,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingSkeletonCard } from '../../components/LoadingSkeleton';
 import { ErrorBanner } from '../../components/ErrorBanner';
 import { RiskBadge } from '../../components/RiskBadge';
+import { FadeInUp } from '../../components/FadeInUp';
 import { colors, spacing, typography } from '../../constants/theme';
 import { getHeatmap, recalculateHeatmap, bboxAroundPoint } from '../../services/heatmapApi';
 import { getCurrentGeoPoint } from '../../services/location';
@@ -59,39 +60,45 @@ export function RiskZonesScreen(_props: Props) {
     <ScreenContainer>
       {error ? <ErrorBanner message={error} /> : null}
 
-      <Button
-        label="Refresh for my area"
-        variant="secondary"
-        onPress={() => void handleRecalculate()}
-        loading={recalculating}
-        style={styles.refreshButton}
-      />
+      <FadeInUp>
+        <Button
+          label="Refresh for my area"
+          variant="secondary"
+          onPress={() => void handleRecalculate()}
+          loading={recalculating}
+          style={styles.refreshButton}
+        />
+      </FadeInUp>
 
       {zones === null ? (
         <GlassCard>
           <LoadingSkeletonCard />
         </GlassCard>
       ) : zones.length === 0 ? (
-        <EmptyState
-          title="No risk data for this area yet"
-          message="Zones appear once nearby reports or SOS events build up recent activity. Try Refresh after a report is filed nearby."
-        />
+        <FadeInUp delay={60}>
+          <EmptyState
+            title="No risk data for this area yet"
+            message="Zones appear once nearby reports or SOS events build up recent activity. Try Refresh after a report is filed nearby."
+          />
+        </FadeInUp>
       ) : (
         <FlatList
           data={zones}
           keyExtractor={(item) => item.zoneId}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <GlassCard style={styles.card}>
-              <View style={styles.row}>
-                <RiskBadge level={item.riskLevel} />
-                <Text style={styles.score}>Risk {item.riskScore}</Text>
-              </View>
-              <Text style={styles.meta}>
-                {item.reportCount} report{item.reportCount === 1 ? '' : 's'} · {item.sosCount} SOS event
-                {item.sosCount === 1 ? '' : 's'} · last {new Date(item.lastCalculatedAt).toLocaleDateString()}
-              </Text>
-            </GlassCard>
+          renderItem={({ item, index }) => (
+            <FadeInUp delay={Math.min(index * 50, 400)}>
+              <GlassCard style={styles.card}>
+                <View style={styles.row}>
+                  <RiskBadge level={item.riskLevel} />
+                  <Text style={styles.score}>Risk {item.riskScore}</Text>
+                </View>
+                <Text style={styles.meta}>
+                  {item.reportCount} report{item.reportCount === 1 ? '' : 's'} · {item.sosCount} SOS event
+                  {item.sosCount === 1 ? '' : 's'} · last {new Date(item.lastCalculatedAt).toLocaleDateString()}
+                </Text>
+              </GlassCard>
+            </FadeInUp>
           )}
         />
       )}

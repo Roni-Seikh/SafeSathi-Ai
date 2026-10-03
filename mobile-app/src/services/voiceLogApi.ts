@@ -46,9 +46,17 @@ export async function submitVoiceLog(
   // know about this RN-specific shape.
   form.append('audio', { uri: params.fileUri, name: 'clip.m4a', type: 'audio/m4a' });
 
+  // Longer than apiClient's default 15s — the backend's own call to the
+  // AI service for this specific request can legitimately take up to 30s
+  // (Vosk transcription + librosa pitch estimation, worse on a Render
+  // free-tier cold start; see aiServiceClient.ts's VOICE_ANALYSIS_TIMEOUT_MS
+  // for the full reasoning). Without this, the phone would give up on a
+  // request the backend was still genuinely working on and about to
+  // succeed.
   const { data } = await apiClient.post<ApiSuccess<{ voiceLog: VoiceLogRecord; sosTriggered: boolean }>>(
     '/voice-logs',
-    form
+    form,
+    { timeout: 35000 }
   );
   return data.data;
 }

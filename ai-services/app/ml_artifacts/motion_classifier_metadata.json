@@ -16,16 +16,16 @@
     "violent_movement",
     "sudden_fall"
   ],
-  "trained_on": "synthetic data \u2014 see section 2 of this notebook for the reasoning",
+  "trained_on": "data/motion_training_data.csv",
   "samples_per_class": 600,
-  "test_accuracy": 0.9766666666666667,
-  "cv_accuracy_mean": 0.9753333333333334,
-  "cv_accuracy_std": 0.0050990195135927775,
+  "test_accuracy": 0.96,
+  "cv_accuracy_mean": 0.9706666666666667,
+  "cv_accuracy_std": 0.002260776661041769,
   "per_class_f1": {
     "normal": 1.0,
     "running": 0.9915966386554622,
-    "phone_snatch": 0.9620253164556962,
-    "violent_movement": 0.9547325102880658,
-    "sudden_fall": 0.9752066115702479
+    "phone_snatch": 0.9411764705882353,
+    "violent_movement": 0.9173553719008265,
+    "sudden_fall": 0.9504132231404959
   }
 }

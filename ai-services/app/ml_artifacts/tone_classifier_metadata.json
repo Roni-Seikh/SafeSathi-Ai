@@ -1,0 +1,23 @@
+{
+  "feature_names": [
+    "pitch_hz",
+    "loudness_db",
+    "spectral_centroid_hz",
+    "pitch_jitter"
+  ],
+  "class_labels": [
+    "normal_speech",
+    "fear_distress",
+    "scream"
+  ],
+  "trained_on": "data/tone_training_data.csv",
+  "samples_per_class": 700,
+  "test_accuracy": 0.9880952380952381,
+  "cv_accuracy_mean": 0.9871428571428572,
+  "cv_accuracy_std": 0.002857142857142877,
+  "per_class_f1": {
+    "normal_speech": 0.9824561403508771,
+    "fear_distress": 0.9818181818181818,
+    "scream": 1.0
+  }
+}

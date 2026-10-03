@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation.types';
@@ -8,6 +8,8 @@ import { TextField } from '../../components/TextField';
 import { ToggleRow } from '../../components/ToggleRow';
 import { Button } from '../../components/Button';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { AnimatedPressable } from '../../components/AnimatedPressable';
+import { FadeInUp } from '../../components/FadeInUp';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { createReport, getReportImageUploadUrl, confirmReportImage } from '../../services/reportApi';
 import { getCurrentGeoPoint } from '../../services/location';
@@ -74,43 +76,52 @@ export function ReportIncidentScreen({ navigation }: Props) {
     <ScreenContainer scroll>
       {error ? <ErrorBanner message={error} /> : null}
 
-      <Text style={styles.sectionLabel}>What happened</Text>
-      <View style={styles.typeGrid}>
-        {REPORT_TYPES.map((option) => (
-          <Pressable
-            key={option.value}
-            onPress={() => setType(option.value)}
-            style={[styles.typeChip, type === option.value && styles.typeChipSelected]}
-          >
-            <Text style={[styles.typeChipText, type === option.value && styles.typeChipTextSelected]}>{option.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <FadeInUp>
+        <Text style={styles.sectionLabel}>What happened</Text>
+        <View style={styles.typeGrid}>
+          {REPORT_TYPES.map((option) => (
+            <AnimatedPressable
+              key={option.value}
+              onPress={() => setType(option.value)}
+              style={[styles.typeChip, type === option.value && styles.typeChipSelected]}
+              scaleTo={0.95}
+              accessibilityRole="button"
+              accessibilityLabel={option.label}
+            >
+              <Text style={[styles.typeChipText, type === option.value && styles.typeChipTextSelected]}>{option.label}</Text>
+            </AnimatedPressable>
+          ))}
+        </View>
+      </FadeInUp>
 
-      <TextField
-        label="Description"
-        placeholder="What happened, and anything that might help others stay safe"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-        numberOfLines={4}
-        style={styles.textArea}
-      />
+      <FadeInUp delay={80}>
+        <TextField
+          label="Description"
+          placeholder="What happened, and anything that might help others stay safe"
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          numberOfLines={4}
+          style={styles.textArea}
+        />
 
-      <Pressable onPress={() => void handlePickImage()} style={styles.photoButton}>
-        <Text style={styles.photoButtonText}>{imageUri ? 'Photo attached ✓' : '+ Add a photo (optional)'}</Text>
-      </Pressable>
+        <AnimatedPressable onPress={() => void handlePickImage()} style={styles.photoButton} scaleTo={0.98}>
+          <Text style={styles.photoButtonText}>{imageUri ? 'Photo attached ✓' : '+ Add a photo (optional)'}</Text>
+        </AnimatedPressable>
 
-      <Text style={styles.locationNote}>Your current location will be attached automatically.</Text>
+        <Text style={styles.locationNote}>Your current location will be attached automatically.</Text>
 
-      <ToggleRow
-        label="Report anonymously"
-        description="Your name won't be attached to this report."
-        value={isAnonymous}
-        onValueChange={setIsAnonymous}
-      />
+        <ToggleRow
+          label="Report anonymously"
+          description="Your name won't be attached to this report."
+          value={isAnonymous}
+          onValueChange={setIsAnonymous}
+        />
+      </FadeInUp>
 
-      <Button label="Submit Report" onPress={() => void handleSubmit()} loading={submitting} style={styles.submit} />
+      <FadeInUp delay={140}>
+        <Button label="Submit Report" onPress={() => void handleSubmit()} loading={submitting} style={styles.submit} />
+      </FadeInUp>
     </ScreenContainer>
   );
 }

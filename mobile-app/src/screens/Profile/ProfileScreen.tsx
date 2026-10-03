@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { ChevronRight, User as UserIcon } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation.types';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { GlassCard } from '../../components/GlassCard';
+import { AnimatedPressable } from '../../components/AnimatedPressable';
+import { FadeInUp } from '../../components/FadeInUp';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAppSelector } from '../../store/hooks';
 
@@ -17,37 +19,46 @@ interface RowProps {
 
 function Row({ label, onPress }: RowProps) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
+    <AnimatedPressable onPress={onPress} style={styles.row} scaleTo={0.99} accessibilityRole="button" accessibilityLabel={label}>
       <Text style={styles.rowLabel}>{label}</Text>
       <ChevronRight size={18} color={colors.textTertiary} />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 export function ProfileScreen({ navigation }: Props) {
   const user = useAppSelector((state) => state.auth.user);
 
+  const rows: RowProps[] = [
+    { label: 'Personal Information', onPress: () => navigation.navigate('PersonalInfo') },
+    { label: 'Medical Information', onPress: () => navigation.navigate('MedicalInfo') },
+    { label: 'Emergency Contacts', onPress: () => navigation.navigate('Contacts') },
+    { label: 'Safety Preferences', onPress: () => navigation.navigate('SafetyPreferences') },
+    { label: 'Settings', onPress: () => navigation.navigate('Settings') },
+  ];
+
   return (
     <ScreenContainer scroll>
-      <View style={styles.identity}>
-        <View style={styles.avatar}>
-          <UserIcon size={32} color={colors.primary} />
+      <FadeInUp>
+        <View style={styles.identity}>
+          <View style={styles.avatar}>
+            <UserIcon size={32} color={colors.primary} />
+          </View>
+          <Text style={styles.name}>{user?.name ?? '—'}</Text>
+          <Text style={styles.phone}>{user?.phone ?? ''}</Text>
         </View>
-        <Text style={styles.name}>{user?.name ?? '—'}</Text>
-        <Text style={styles.phone}>{user?.phone ?? ''}</Text>
-      </View>
+      </FadeInUp>
 
-      <GlassCard padded={false} style={styles.menu}>
-        <Row label="Personal Information" onPress={() => navigation.navigate('PersonalInfo')} />
-        <Divider />
-        <Row label="Medical Information" onPress={() => navigation.navigate('MedicalInfo')} />
-        <Divider />
-        <Row label={`Emergency Contacts`} onPress={() => navigation.navigate('Contacts')} />
-        <Divider />
-        <Row label="Safety Preferences" onPress={() => navigation.navigate('SafetyPreferences')} />
-        <Divider />
-        <Row label="Settings" onPress={() => navigation.navigate('Settings')} />
-      </GlassCard>
+      <FadeInUp delay={80}>
+        <GlassCard padded={false} style={styles.menu}>
+          {rows.map((row, index) => (
+            <React.Fragment key={row.label}>
+              {index > 0 ? <Divider /> : null}
+              <Row {...row} />
+            </React.Fragment>
+          ))}
+        </GlassCard>
+      </FadeInUp>
     </ScreenContainer>
   );
 }
@@ -90,9 +101,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.base,
     paddingHorizontal: spacing.lg,
-  },
-  rowPressed: {
-    backgroundColor: colors.glassFillStrong,
   },
   rowLabel: {
     ...typography.bodyMedium,

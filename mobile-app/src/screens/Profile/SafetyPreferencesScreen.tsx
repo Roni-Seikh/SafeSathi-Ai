@@ -6,6 +6,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { GlassCard } from '../../components/GlassCard';
 import { ToggleRow } from '../../components/ToggleRow';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { FadeInUp } from '../../components/FadeInUp';
 import { spacing } from '../../constants/theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { updateSafetyPreferencesThunk } from '../../store/slices/authSlice';
@@ -72,20 +73,22 @@ export function SafetyPreferencesScreen(_props: Props) {
     <ScreenContainer scroll>
       {error ? <ErrorBanner message={error} /> : null}
 
-      <GlassCard style={styles.card}>
-        {PREFERENCE_ROWS.map((row, index) => (
-          <View key={row.key}>
-            <ToggleRow
-              label={row.label}
-              description={row.description}
-              value={preferences[row.key]}
-              onValueChange={(value) => void handleToggle(row.key, value)}
-              disabled={savingKey === row.key}
-            />
-            {index < PREFERENCE_ROWS.length - 1 ? <View style={styles.divider} /> : null}
-          </View>
-        ))}
-      </GlassCard>
+      <FadeInUp>
+        <GlassCard style={styles.card}>
+          {PREFERENCE_ROWS.map((row, index) => (
+            <View key={row.key}>
+              <ToggleRow
+                label={row.label}
+                description={row.description}
+                value={preferences[row.key]}
+                onValueChange={(value) => void handleToggle(row.key, value)}
+                disabled={savingKey === row.key}
+              />
+              {index < PREFERENCE_ROWS.length - 1 ? <View style={styles.divider} /> : null}
+            </View>
+          ))}
+        </GlassCard>
+      </FadeInUp>
     </ScreenContainer>
   );
 }

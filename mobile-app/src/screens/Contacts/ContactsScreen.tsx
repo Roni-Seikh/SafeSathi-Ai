@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { Star, ChevronRight } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation.types';
@@ -8,6 +8,8 @@ import { GlassCard } from '../../components/GlassCard';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingSkeletonCard } from '../../components/LoadingSkeleton';
+import { AnimatedPressable } from '../../components/AnimatedPressable';
+import { FadeInUp } from '../../components/FadeInUp';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchContacts } from '../../store/slices/contactsSlice';
@@ -28,29 +30,37 @@ export function ContactsScreen({ navigation }: Props) {
 
   return (
     <ScreenContainer>
-      <View style={styles.countRow}>
-        <Text style={styles.countText}>
-          {items.length} / {MAX_EMERGENCY_CONTACTS} contacts
-        </Text>
-      </View>
+      <FadeInUp>
+        <View style={styles.countRow}>
+          <Text style={styles.countText}>
+            {items.length} / {MAX_EMERGENCY_CONTACTS} contacts
+          </Text>
+        </View>
+      </FadeInUp>
 
       {status === 'loading' && items.length === 0 ? (
         <GlassCard>
           <LoadingSkeletonCard />
         </GlassCard>
       ) : items.length === 0 ? (
-        <EmptyState
-          title="No emergency contacts yet"
-          message="Add the people you trust most — they'll be notified the moment you trigger SOS."
-          actionLabel="Add contact"
-          onAction={() => navigation.navigate('AddEditContact')}
-        />
+        <FadeInUp delay={60}>
+          <EmptyState
+            title="No emergency contacts yet"
+            message="Add the people you trust most — they'll be notified the moment you trigger SOS."
+            actionLabel="Add contact"
+            onAction={() => navigation.navigate('AddEditContact')}
+          />
+        </FadeInUp>
       ) : (
         <FlatList
           data={items}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => <ContactRow contact={item} onPress={() => navigation.navigate('AddEditContact', { contactId: item._id })} />}
+          renderItem={({ item, index }) => (
+            <FadeInUp delay={index * 50}>
+              <ContactRow contact={item} onPress={() => navigation.navigate('AddEditContact', { contactId: item._id })} />
+            </FadeInUp>
+          )}
         />
       )}
 
@@ -68,7 +78,7 @@ export function ContactsScreen({ navigation }: Props) {
 
 function ContactRow({ contact, onPress }: { contact: EmergencyContact; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.rowPressed]}>
+    <AnimatedPressable onPress={onPress} scaleTo={0.98} accessibilityRole="button" accessibilityLabel={contact.name}>
       <GlassCard style={styles.contactCard}>
         <View style={styles.contactInfo}>
           <View style={styles.nameRow}>
@@ -81,7 +91,7 @@ function ContactRow({ contact, onPress }: { contact: EmergencyContact; onPress: 
         </View>
         <ChevronRight size={18} color={colors.textTertiary} />
       </GlassCard>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -96,9 +106,6 @@ const styles = StyleSheet.create({
   list: {
     gap: spacing.md,
     paddingBottom: spacing.xl,
-  },
-  rowPressed: {
-    opacity: 0.85,
   },
   contactCard: {
     flexDirection: 'row',

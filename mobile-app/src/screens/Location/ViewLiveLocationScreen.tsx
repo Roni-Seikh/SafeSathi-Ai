@@ -8,6 +8,8 @@ import { GlassCard } from '../../components/GlassCard';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingSkeletonCard } from '../../components/LoadingSkeleton';
+import { FadeInUp } from '../../components/FadeInUp';
+import { PulseDot } from '../../components/PulseDot';
 import { colors, spacing, typography } from '../../constants/theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchLiveLocationThunk, liveLocationUpdated, liveSharingStopped, clearLiveView } from '../../store/slices/locationSlice';
@@ -71,43 +73,50 @@ export function ViewLiveLocationScreen({ route }: Props) {
   if (!liveView && error) {
     return (
       <ScreenContainer>
-        <EmptyState title="No live location available" message={error} />
+        <FadeInUp>
+          <EmptyState title="No live location available" message={error} />
+        </FadeInUp>
       </ScreenContainer>
     );
   }
 
   return (
     <ScreenContainer>
-      <GlassCard style={styles.card}>
-        <Text style={styles.name}>{sharerName ?? 'Live location'}</Text>
-        {liveView?.isStale ? (
-          <Text style={styles.stopped}>Sharing has stopped — this was their last known location.</Text>
-        ) : (
-          <Text style={styles.live}>● Live</Text>
-        )}
+      <FadeInUp>
+        <GlassCard style={styles.card}>
+          <Text style={styles.name}>{sharerName ?? 'Live location'}</Text>
+          {liveView?.isStale ? (
+            <Text style={styles.stopped}>Sharing has stopped — this was their last known location.</Text>
+          ) : (
+            <View style={styles.liveRow}>
+              <PulseDot size={7} />
+              <Text style={styles.live}>Live</Text>
+            </View>
+          )}
 
-        <View style={styles.row}>
-          <MapPin size={18} color={colors.textSecondary} />
-          <Text style={styles.rowText}>
-            {liveView ? `${liveView.coordinates[1].toFixed(5)}, ${liveView.coordinates[0].toFixed(5)}` : '—'}
-          </Text>
-        </View>
-
-        {liveView?.batteryLevel != null ? (
           <View style={styles.row}>
-            <BatteryMedium size={18} color={colors.textSecondary} />
-            <Text style={styles.rowText}>{liveView.batteryLevel}% battery</Text>
+            <MapPin size={18} color={colors.textSecondary} />
+            <Text style={styles.rowText}>
+              {liveView ? `${liveView.coordinates[1].toFixed(5)}, ${liveView.coordinates[0].toFixed(5)}` : '—'}
+            </Text>
           </View>
-        ) : null}
 
-        {liveView ? (
-          <Text style={styles.updatedAt}>Updated {new Date(liveView.recordedAt).toLocaleTimeString()}</Text>
-        ) : null}
+          {liveView?.batteryLevel != null ? (
+            <View style={styles.row}>
+              <BatteryMedium size={18} color={colors.textSecondary} />
+              <Text style={styles.rowText}>{liveView.batteryLevel}% battery</Text>
+            </View>
+          ) : null}
 
-        {socketError ? <Text style={styles.socketError}>{socketError}</Text> : null}
-      </GlassCard>
+          {liveView ? (
+            <Text style={styles.updatedAt}>Updated {new Date(liveView.recordedAt).toLocaleTimeString()}</Text>
+          ) : null}
 
-      <Button label="Open in Maps" onPress={openInMaps} disabled={!liveView} />
+          {socketError ? <Text style={styles.socketError}>{socketError}</Text> : null}
+        </GlassCard>
+
+        <Button label="Open in Maps" onPress={openInMaps} disabled={!liveView} />
+      </FadeInUp>
     </ScreenContainer>
   );
 }
@@ -121,6 +130,11 @@ const styles = StyleSheet.create({
   name: {
     ...typography.h2,
     color: colors.textPrimary,
+  },
+  liveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   live: {
     ...typography.bodySmall,

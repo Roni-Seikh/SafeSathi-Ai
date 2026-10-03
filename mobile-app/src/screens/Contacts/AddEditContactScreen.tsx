@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation.types';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -7,6 +7,7 @@ import { TextField } from '../../components/TextField';
 import { ToggleRow } from '../../components/ToggleRow';
 import { Button } from '../../components/Button';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { FadeInUp } from '../../components/FadeInUp';
 import { colors, spacing, typography } from '../../constants/theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { createContact, editContact, removeContact } from '../../store/slices/contactsSlice';
@@ -82,27 +83,29 @@ export function AddEditContactScreen({ route, navigation }: Props) {
     <ScreenContainer scroll>
       {error ? <ErrorBanner message={error} /> : null}
 
-      <TextField label="Name" value={name} onChangeText={setName} autoCapitalize="words" />
-      <TextField label="Relationship" placeholder="e.g. Mother, Friend" value={relationship} onChangeText={setRelationship} />
-      <TextField label="Phone number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      <TextField label="Email (optional)" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+      <FadeInUp>
+        <TextField label="Name" value={name} onChangeText={setName} autoCapitalize="words" />
+        <TextField label="Relationship" placeholder="e.g. Mother, Friend" value={relationship} onChangeText={setRelationship} />
+        <TextField label="Phone number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+        <TextField label="Email (optional)" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
 
-      <ToggleRow
-        label="Primary contact"
-        description="Contacted first when SOS is triggered."
-        value={isPrimary}
-        onValueChange={setIsPrimary}
-      />
+        <ToggleRow
+          label="Primary contact"
+          description="Contacted first when SOS is triggered."
+          value={isPrimary}
+          onValueChange={setIsPrimary}
+        />
+      </FadeInUp>
 
-      <Button label={existing ? 'Save changes' : 'Add contact'} onPress={() => void handleSave()} loading={saving} style={styles.save} />
+      <FadeInUp delay={100}>
+        <Button label={existing ? 'Save changes' : 'Add contact'} onPress={() => void handleSave()} loading={saving} style={styles.save} />
 
-      {existing ? (
-        <>
+        {existing ? (
           <Text style={styles.deleteLabel} onPress={() => void handleDelete()}>
             {deleting ? 'Removing…' : 'Remove this contact'}
           </Text>
-        </>
-      ) : null}
+        ) : null}
+      </FadeInUp>
     </ScreenContainer>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
+import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../types/navigation.types';
@@ -8,6 +8,9 @@ import { GlassCard } from '../../components/GlassCard';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { AnimatedPressable } from '../../components/AnimatedPressable';
+import { FadeInUp } from '../../components/FadeInUp';
+import { PulseDot } from '../../components/PulseDot';
 import { colors, radii, spacing, typography } from '../../constants/theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchContacts } from '../../store/slices/contactsSlice';
@@ -60,10 +63,12 @@ export function ShareLocationScreen(_props: Props) {
   if (linkedContacts.length === 0) {
     return (
       <ScreenContainer>
-        <EmptyState
-          title="No contacts can view your location yet"
-          message="Live location sharing only works with emergency contacts who also use SafeSathi — add one from Emergency Contacts first, using the same phone number they registered with."
-        />
+        <FadeInUp>
+          <EmptyState
+            title="No contacts can view your location yet"
+            message="Live location sharing only works with emergency contacts who also use SafeSathi — add one from Emergency Contacts first, using the same phone number they registered with."
+          />
+        </FadeInUp>
       </ScreenContainer>
     );
   }
@@ -71,18 +76,23 @@ export function ShareLocationScreen(_props: Props) {
   if (isSharing) {
     return (
       <ScreenContainer>
-        <GlassCard style={styles.statusCard}>
-          <Text style={styles.statusTitle}>You're sharing your location</Text>
-          <Text style={styles.statusBody}>
-            {sharedWithUserIds.length} contact{sharedWithUserIds.length === 1 ? '' : 's'} can see your live location
-            right now.
-          </Text>
-          <Text style={styles.statusMeta}>
-            {isTracking ? 'Tracking active' : 'Starting tracking…'}
-            {lastSentAt ? ` · last sent ${lastSentAt.toLocaleTimeString()}` : ''}
-          </Text>
-        </GlassCard>
-        <Button label="Stop Sharing" variant="danger" onPress={() => void handleStop()} loading={submitting} />
+        <FadeInUp>
+          <GlassCard style={styles.statusCard}>
+            <Text style={styles.statusTitle}>You're sharing your location</Text>
+            <Text style={styles.statusBody}>
+              {sharedWithUserIds.length} contact{sharedWithUserIds.length === 1 ? '' : 's'} can see your live location
+              right now.
+            </Text>
+            <View style={styles.statusMetaRow}>
+              {isTracking ? <PulseDot size={7} /> : null}
+              <Text style={styles.statusMeta}>
+                {isTracking ? 'Tracking active' : 'Starting tracking…'}
+                {lastSentAt ? ` · last sent ${lastSentAt.toLocaleTimeString()}` : ''}
+              </Text>
+            </View>
+          </GlassCard>
+          <Button label="Stop Sharing" variant="danger" onPress={() => void handleStop()} loading={submitting} />
+        </FadeInUp>
       </ScreenContainer>
     );
   }
@@ -90,30 +100,36 @@ export function ShareLocationScreen(_props: Props) {
   return (
     <ScreenContainer>
       {error ? <ErrorBanner message={error} /> : null}
-      <Text style={styles.sectionLabel}>Share with</Text>
+      <FadeInUp>
+        <Text style={styles.sectionLabel}>Share with</Text>
+      </FadeInUp>
       <FlatList
         data={linkedContacts}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const selected = selectedIds.includes(item._id);
           return (
-            <Pressable onPress={() => toggle(item._id)}>
-              <GlassCard style={styles.contactRow}>
-                <View>
-                  <Text style={styles.contactName}>{item.name}</Text>
-                  <Text style={styles.contactMeta}>{item.relationship}</Text>
-                </View>
-                <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-                  {selected ? <Check size={14} color={colors.textOnPrimary} /> : null}
-                </View>
-              </GlassCard>
-            </Pressable>
+            <FadeInUp delay={Math.min(index * 50, 300)}>
+              <AnimatedPressable onPress={() => toggle(item._id)} scaleTo={0.98} accessibilityRole="button" accessibilityLabel={item.name}>
+                <GlassCard style={styles.contactRow}>
+                  <View>
+                    <Text style={styles.contactName}>{item.name}</Text>
+                    <Text style={styles.contactMeta}>{item.relationship}</Text>
+                  </View>
+                  <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
+                    {selected ? <Check size={14} color={colors.textOnPrimary} /> : null}
+                  </View>
+                </GlassCard>
+              </AnimatedPressable>
+            </FadeInUp>
           );
         }}
       />
-      <Text style={styles.hint}>Leave everyone unselected to share with all contacts who get SOS alerts.</Text>
-      <Button label="Start Sharing" onPress={() => void handleStart()} loading={submitting} />
+      <FadeInUp delay={100}>
+        <Text style={styles.hint}>Leave everyone unselected to share with all contacts who get SOS alerts.</Text>
+        <Button label="Start Sharing" onPress={() => void handleStart()} loading={submitting} />
+      </FadeInUp>
     </ScreenContainer>
   );
 }
@@ -174,9 +190,14 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
   },
+  statusMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
   statusMeta: {
     ...typography.caption,
     color: colors.safe,
-    marginTop: spacing.sm,
   },
 });

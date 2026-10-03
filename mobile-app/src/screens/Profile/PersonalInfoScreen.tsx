@@ -6,6 +6,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { Button } from '../../components/Button';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { FadeInUp } from '../../components/FadeInUp';
 import { colors, spacing, typography } from '../../constants/theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { updateProfileThunk } from '../../store/slices/authSlice';
@@ -49,17 +50,25 @@ export function PersonalInfoScreen({ navigation }: Props) {
     <ScreenContainer scroll>
       {error ? <ErrorBanner message={error} /> : null}
 
-      <TextField label="Full name" value={name} onChangeText={setName} autoCapitalize="words" />
+      <FadeInUp>
+        <TextField label="Full name" value={name} onChangeText={setName} autoCapitalize="words" />
+      </FadeInUp>
 
-      <Text style={styles.sectionLabel}>Address</Text>
-      <TextField label="City" value={city} onChangeText={setCity} />
-      <TextField label="State" value={state} onChangeText={setStateField} />
-      <TextField label="Pincode" value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
+      <FadeInUp delay={60}>
+        <Text style={styles.sectionLabel}>Address</Text>
+        <TextField label="City" value={city} onChangeText={setCity} />
+        <TextField label="State" value={state} onChangeText={setStateField} />
+        <TextField label="Pincode" value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
+      </FadeInUp>
 
-      <TextField label="Email" value={user?.email ?? ''} editable={false} />
-      <TextField label="Phone" value={user?.phone ?? ''} editable={false} />
+      <FadeInUp delay={120}>
+        <TextField label="Email" value={user?.email ?? ''} editable={false} />
+        <TextField label="Phone" value={user?.phone ?? ''} editable={false} />
+      </FadeInUp>
 
-      <Button label="Save changes" onPress={() => void handleSave()} loading={saving} style={styles.save} />
+      <FadeInUp delay={160}>
+        <Button label="Save changes" onPress={() => void handleSave()} loading={saving} style={styles.save} />
+      </FadeInUp>
     </ScreenContainer>
   );
 }

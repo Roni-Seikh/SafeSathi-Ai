@@ -8,6 +8,7 @@ import { GlassCard } from '../../components/GlassCard';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingSkeletonCard } from '../../components/LoadingSkeleton';
 import { ErrorBanner } from '../../components/ErrorBanner';
+import { FadeInUp } from '../../components/FadeInUp';
 import { colors, spacing, typography } from '../../constants/theme';
 import { getNearbyAlerts } from '../../services/communityApi';
 import { getCurrentGeoPoint } from '../../services/location';
@@ -53,23 +54,27 @@ export function CommunityAlertsScreen(_props: Props) {
           <LoadingSkeletonCard />
         </GlassCard>
       ) : reports.length === 0 ? (
-        <EmptyState title="No alerts nearby" message="Nothing reported within 800m of you in the last 24 hours." />
+        <FadeInUp>
+          <EmptyState title="No alerts nearby" message="Nothing reported within 800m of you in the last 24 hours." />
+        </FadeInUp>
       ) : (
         <FlatList
           data={reports}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <GlassCard style={styles.card}>
-              <View style={styles.row}>
-                <AlertTriangle size={18} color={colors.caution} />
-                <Text style={styles.type}>{TYPE_LABELS[item.type]}</Text>
-              </View>
-              <Text style={styles.description} numberOfLines={2}>
-                {item.description}
-              </Text>
-              <Text style={styles.time}>{new Date(item.createdAt).toLocaleString()}</Text>
-            </GlassCard>
+          renderItem={({ item, index }) => (
+            <FadeInUp delay={Math.min(index * 50, 400)}>
+              <GlassCard style={styles.card}>
+                <View style={styles.row}>
+                  <AlertTriangle size={18} color={colors.caution} />
+                  <Text style={styles.type}>{TYPE_LABELS[item.type]}</Text>
+                </View>
+                <Text style={styles.description} numberOfLines={2}>
+                  {item.description}
+                </Text>
+                <Text style={styles.time}>{new Date(item.createdAt).toLocaleString()}</Text>
+              </GlassCard>
+            </FadeInUp>
           )}
         />
       )}

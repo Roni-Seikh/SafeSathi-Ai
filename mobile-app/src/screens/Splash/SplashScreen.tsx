@@ -1,16 +1,41 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { colors, spacing, typography } from '../../constants/theme';
+import { colors, spacing, typography, radii } from '../../constants/theme';
 
 export function SplashScreen() {
+  const entrance = useRef(new Animated.Value(0)).current;
+  const breathe = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(entrance, {
+      toValue: 1,
+      duration: 620,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(breathe, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start();
+  }, [entrance, breathe]);
+
+  const badgeScale = entrance.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] });
+  const textTranslateY = entrance.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
+  const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
+
   return (
     <View style={styles.container}>
-      <View style={styles.badge}>
+      <Animated.View style={[styles.badge, { opacity: entrance, transform: [{ scale: Animated.multiply(badgeScale, breatheScale) }] }]}>
         <ShieldMark size={56} />
-      </View>
-      <Text style={styles.title}>SafeSathi</Text>
-      <Text style={styles.tagline}>Proactive Safety, Not Just an SOS Button.</Text>
+      </Animated.View>
+      <Animated.View style={{ opacity: entrance, transform: [{ translateY: textTranslateY }] }}>
+        <Text style={styles.title}>SafeSathi</Text>
+        <Text style={styles.tagline}>Proactive Safety, Not Just an SOS Button.</Text>
+      </Animated.View>
     </View>
   );
 }
@@ -40,7 +65,7 @@ const styles = StyleSheet.create({
   badge: {
     width: 96,
     height: 96,
-    borderRadius: 24,
+    borderRadius: radii.xl,
     backgroundColor: colors.glassFill,
     borderWidth: 1,
     borderColor: colors.glassBorder,
@@ -52,6 +77,7 @@ const styles = StyleSheet.create({
     ...typography.displayLarge,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   tagline: {
     ...typography.body,
