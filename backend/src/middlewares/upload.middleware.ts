@@ -1,12 +1,13 @@
 import multer from 'multer';
 
-/** In-memory storage — the file becomes a Buffer on req.file, never
- * touches disk. Fine for the short voice clips this is used for
- * (POST /voice-logs, WAV or m4a/AAC — the AI service transcodes via
- * ffmpeg if needed); a general-purpose evidence-upload path (Silent
- * Evidence Collection, Phase 6+) would use signed Firebase Storage URLs
- * instead, the same pattern as the avatar upload in UserService. */
+/** In-memory storage — the file becomes a Buffer on req.file, never touches disk. */
 export const memoryUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB — a few seconds of 16-bit mono PCM WAV
+  limits: { fileSize: 5 * 1024 * 1024 }, // short voice clips for /voice-logs
+});
+
+/** SOS evidence chunks (≈20-30 s of AAC/m4a, typically 100–400 KB). */
+export const evidenceUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
 });

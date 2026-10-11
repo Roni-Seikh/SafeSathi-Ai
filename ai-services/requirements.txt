@@ -19,3 +19,4 @@ joblib==1.5.3
 # reading Report/SOSLog data directly from MongoDB) and RAG-chatbot work.
 motor==3.5.1
 httpx==0.28.1
+pandas==3.0.2

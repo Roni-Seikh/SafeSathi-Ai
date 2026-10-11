@@ -32,6 +32,8 @@ export const SOS_TRIGGER_LABEL: Record<string, string> = {
   motion: 'Motion sensor',
   tone: 'Tone detection',
   admin: 'Admin-initiated',
+  journey: 'Guardian Journey',
+  shake: 'Panic shake',
 };
 
 export const RISK_LEVEL_LABEL: Record<string, string> = {

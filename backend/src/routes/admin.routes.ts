@@ -7,6 +7,7 @@ import * as adminReportsController from '../controllers/adminReports.controller'
 import * as adminSOSController from '../controllers/adminSOS.controller';
 import * as adminHeatmapController from '../controllers/adminHeatmap.controller';
 import * as adminExportController from '../controllers/adminExport.controller';
+import * as adminInsightsController from '../controllers/adminInsights.controller';
 import { requireAdminAuth, requireAdminRole } from '../middlewares/adminAuth.middleware';
 import { validate } from '../middlewares/validateRequest.middleware';
 import {
@@ -66,6 +67,12 @@ router.patch(
   validate(adminRejectReportSchema),
   adminReportsController.rejectReport
 );
+
+// Intelligence layer — KPIs, forecast, anomalies, hotspots, detector quality.
+router.get('/analytics/intelligence', validate(adminInsightsController.insightsQuerySchema, 'query'), adminInsightsController.getIntelligence);
+
+// Evidence vault for one SOS (tamper-evident chain verification included).
+router.get('/sos/:id/evidence', adminInsightsController.getSOSEvidence);
 
 // Live + historical SOS monitor — read-only.
 router.get('/sos', validate(adminSOSListQuerySchema, 'query'), adminSOSController.listSOS);

@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { initSocketServer } from './realtime/socketServer';
 import { logger } from './utils/logger';
+import { journeyService } from './config/container';
 
 async function start(): Promise<void> {
   await connectDatabase();
@@ -12,6 +13,7 @@ async function start(): Promise<void> {
   const app = createApp();
   const httpServer = http.createServer(app);
   initSocketServer(httpServer);
+  journeyService.startWatchdog(); // server-side dead-man's switch for Guardian Journeys
 
   httpServer.listen(env.PORT, () => {
     logger.info(`SafeSathi backend listening on port ${env.PORT} [${env.NODE_ENV}] (HTTP + WebSocket)`);

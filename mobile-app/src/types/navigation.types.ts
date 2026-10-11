@@ -20,6 +20,22 @@ export type AppStackParamList = {
   SafeRoute: undefined;
   RiskZones: undefined;
   Settings: undefined;
+  AutoSOSCountdown: {
+    source: 'voice_keyword' | 'tone' | 'shake';
+    keyword?: 'help' | 'save_me' | 'bachao' | 'chere_din' | 'stop' | 'none';
+    transcript?: string;
+    confidence?: number;
+    language?: 'en' | 'hi' | 'bn';
+    screamScore?: number;
+    seconds: number;
+  };
+  SathiChat: { prefill?: string } | undefined;
+  GuardianJourney: undefined;
+  SafeHaven: undefined;
+  FakeCall: undefined;
+  EvidenceVault: { sosId?: string } | undefined;
+  VoiceTest: undefined;
+  SecurityPins: undefined;
 };
 
 export type RootStackParamList = {

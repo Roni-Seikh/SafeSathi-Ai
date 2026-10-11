@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { IGeoPoint, geoPointSchema } from '../types/common.types';
 
-export type SOSTriggerType = 'manual' | 'voice_keyword' | 'motion' | 'tone' | 'admin';
+export type SOSTriggerType = 'manual' | 'voice_keyword' | 'motion' | 'tone' | 'admin' | 'journey' | 'shake';
 export type SOSStatus = 'active' | 'resolved' | 'false_alarm' | 'cancelled';
 export type SOSContactChannel = 'push' | 'sms' | 'email' | 'call';
 export type SOSContactDeliveryStatus = 'sent' | 'delivered' | 'failed';
@@ -30,6 +30,9 @@ export interface ISOSLog extends Document {
   resolvedAt?: Date;
   resolvedBy?: 'user' | 'contact' | 'admin' | 'auto_timeout';
   notes?: string;
+  /** Raised silently with the duress PIN: the user's screen shows "cancelled" but help is still coming. */
+  duress?: boolean;
+  journeyId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,7 +42,7 @@ const sosLogSchema = new Schema<ISOSLog>(
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     triggerType: {
       type: String,
-      enum: ['manual', 'voice_keyword', 'motion', 'tone', 'admin'],
+      enum: ['manual', 'voice_keyword', 'motion', 'tone', 'admin', 'journey', 'shake'],
       required: true,
     },
     status: {
@@ -68,6 +71,8 @@ const sosLogSchema = new Schema<ISOSLog>(
     resolvedAt: { type: Date },
     resolvedBy: { type: String, enum: ['user', 'contact', 'admin', 'auto_timeout'] },
     notes: { type: String },
+    duress: { type: Boolean, default: false },
+    journeyId: { type: Schema.Types.ObjectId, ref: 'Journey' },
   },
   { timestamps: true }
 );

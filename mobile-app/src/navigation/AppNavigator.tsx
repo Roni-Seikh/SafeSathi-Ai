@@ -16,6 +16,14 @@ import { CommunityAlertsScreen } from '../screens/Community/CommunityAlertsScree
 import { SafeRouteScreen } from '../screens/SafeRoute/SafeRouteScreen';
 import { RiskZonesScreen } from '../screens/RiskZones/RiskZonesScreen';
 import { SettingsScreen } from '../screens/Settings/SettingsScreen';
+import { AutoSOSCountdownScreen } from '../screens/SOS/AutoSOSCountdownScreen';
+import { SathiChatScreen } from '../screens/Chat/SathiChatScreen';
+import { GuardianJourneyScreen } from '../screens/Journey/GuardianJourneyScreen';
+import { SafeHavenScreen } from '../screens/Haven/SafeHavenScreen';
+import { FakeCallScreen } from '../screens/Tools/FakeCallScreen';
+import { EvidenceVaultScreen } from '../screens/Evidence/EvidenceVaultScreen';
+import { VoiceTestScreen } from '../screens/Voice/VoiceTestScreen';
+import { SecurityPinsScreen } from '../screens/Security/SecurityPinsScreen';
 import { useBackgroundDetection } from '../hooks/useBackgroundDetection';
 import { colors, typography } from '../constants/theme';
 
@@ -74,6 +82,14 @@ export function AppNavigator() {
       <Stack.Screen name="SafeRoute" component={SafeRouteScreen} options={{ title: 'Safe Route' }} />
       <Stack.Screen name="RiskZones" component={RiskZonesScreen} options={{ title: 'Risk Zones' }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <Stack.Screen name="AutoSOSCountdown" component={AutoSOSCountdownScreen} options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
+      <Stack.Screen name="SathiChat" component={SathiChatScreen} options={{ title: 'Sathi AI' }} />
+      <Stack.Screen name="GuardianJourney" component={GuardianJourneyScreen} options={{ title: 'Guardian Journey' }} />
+      <Stack.Screen name="SafeHaven" component={SafeHavenScreen} options={{ title: 'Safe Haven' }} />
+      <Stack.Screen name="FakeCall" component={FakeCallScreen} options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="EvidenceVault" component={EvidenceVaultScreen} options={{ title: 'Evidence Vault' }} />
+      <Stack.Screen name="VoiceTest" component={VoiceTestScreen} options={{ title: 'Voice Guardian Test' }} />
+      <Stack.Screen name="SecurityPins" component={SecurityPinsScreen} options={{ title: 'Secret PINs' }} />
     </Stack.Navigator>
   );
 }

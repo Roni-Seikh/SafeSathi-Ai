@@ -1,221 +1,262 @@
 import { useEffect, useRef, useState } from 'react';
-import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
-import { submitVoiceLog } from '../services/voiceLogApi';
-import { getCurrentGeoPoint, getBatteryLevelPercent } from '../services/location';
+import { AppState } from 'react-native';
+import { ExpoSpeechRecognitionModule, addSpeechRecognitionListener, SPEECH_AVAILABLE, NEEDS_DEV_BUILD_MESSAGE } from '../services/speechModule';
+import { CONTEXTUAL_HINTS, KeywordId, KeywordMatch, matchKeywords, Strength } from '../services/voiceKeywords';
+import { voiceBus } from '../services/voiceBus';
+import { LANGUAGE_FOR_LOCALE, VoiceLocale } from '../constants/voice';
 import { SupportedLanguage } from '../types/api.types';
 
-const SEGMENT_DURATION_MS = 4000;
-// Louder than this peak (dBFS, 0 = loudest) somewhere in a segment is
-// worth uploading for analysis — a coarse local gate, not a detection
-// decision. The real decision is the AI service's Vosk keyword match /
-// scream-probability threshold (ai-services/README.md); this just avoids
-// uploading four seconds of near-silence every four seconds.
-const METERING_TRIGGER_DBFS = -20;
-
 /**
- * m4a/AAC, mono, 16kHz — matches what ai-services/app/utils/audio.py was
- * actually verified against (see its docstring). Deliberately not using
- * Audio.RecordingOptionsPresets.HIGH_QUALITY directly, to control the
- * exact output format rather than depend on preset defaults that may
- * differ between iOS/Android in ways this integration wasn't tested
- * against.
+ * Voice Guardian — ON-DEVICE speech recognition.
  *
- * VERIFICATION NOTE: this options object is written against expo-av's
- * documented RecordingOptions shape, but — unlike every backend and
- * ai-services file in this project — it has NOT been exercised against a
- * real device or simulator; there isn't one available in this build
- * environment. Smoke-test recording + metering on an actual device
- * before relying on this in the field.
+ * Why this replaced the old record→upload→Vosk pipeline: that chain needed (1) loud-enough audio to pass a
+ * dBFS gate, (2) the Render backend awake, (3) the AI service awake, (4) Vosk models downloaded on the server,
+ * (5) ffmpeg decoding the phone's m4a correctly — five separate things that had to ALL work for one word to
+ * be heard. Here the phone's own recogniser (Google / Apple) does the listening: no network hop to the AI
+ * service, no models to deploy, no recording gaps, and the work is matched locally in microseconds.
  */
-const RECORDING_OPTIONS: Audio.RecordingOptions = {
-  isMeteringEnabled: true,
-  android: {
-    extension: '.m4a',
-    outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-    audioEncoder: Audio.AndroidAudioEncoder.AAC,
-    sampleRate: 16000,
-    numberOfChannels: 1,
-    bitRate: 64000,
-  },
-  ios: {
-    extension: '.m4a',
-    outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-    audioQuality: Audio.IOSAudioQuality.MEDIUM,
-    sampleRate: 16000,
-    numberOfChannels: 1,
-    bitRate: 64000,
-    linearPCMBitDepth: 16,
-    linearPCMIsBigEndian: false,
-    linearPCMIsFloat: false,
-  },
-  web: {
-    mimeType: 'audio/webm',
-    bitsPerSecond: 64000,
-  },
-};
-
-export interface VoiceDetectorEvent {
-  keyword: string;
-  screamProbability: number;
-  at: Date;
+export interface VoiceTriggerEvent {
+  keyword: KeywordId;
+  strength: Strength;
+  transcript: string;
+  language: SupportedLanguage;
+  confidence: number;
+  source: 'voice_keyword' | 'tone';
+  screamScore?: number;
 }
 
 export interface UseVoiceDetectorResult {
   isListening: boolean;
-  lastEvent: VoiceDetectorEvent | null;
+  lastEvent: { keyword: string; screamProbability: number; at: Date } | null;
   error: string | null;
-  /** Peak dBFS metering seen in the most recently completed segment —
-   * exposed so a debug UI (or a console.log while testing on a real
-   * device) can show whether the mic is actually registering your voice
-   * at all, separately from whether it clears METERING_TRIGGER_DBFS. If
-   * this stays at -160 while you're speaking at normal volume, metering
-   * updates aren't reaching the app — see the on-device debugging note
-   * in this hook's file-level comment. */
-  lastPeakDbfs: number | null;
 }
 
-/**
- * Records in rolling ~4s segments rather than one continuous stream:
- * expo-av's JS API gives you a finished file once a Recording is
- * stopped, not a way to pull "the last few seconds" out of an ongoing
- * one, so segmenting is how continuous-feeling monitoring is achieved
- * with this API. Each segment's peak metering decides locally whether to
- * upload it at all — most segments are silence/ambient noise and never
- * leave the device.
- *
- * Foreground-only, same caveat as useMotionDetector — true background
- * audio needs a foreground service (Android) / background audio session
- * handling (iOS) beyond what this build wires up. See
- * mobile-app/README.md.
- */
+interface Options {
+  customSafeWord: string;
+  screamByVolume: boolean;
+  /** Match and display, but never call onTrigger (used by the Voice Test screen). */
+  dryRun: boolean;
+}
+
+const TRIGGER_COOLDOWN_MS = 12000;
+const SCREAM_COOLDOWN_MS = 60000;
+const SCREAM_LEVEL = 0.92; // ≈ recogniser volume 9/10
+const SCREAM_HOLD_MS = 1500;
+const STALL_MS = 45000;
+
 export function useVoiceDetector(
   enabled: boolean,
-  language: SupportedLanguage,
-  onSOSTriggered: () => void
+  locale: VoiceLocale,
+  onTrigger: (e: VoiceTriggerEvent) => void,
+  options: Options
 ): UseVoiceDetectorResult {
   const [isListening, setIsListening] = useState(false);
-  const [lastEvent, setLastEvent] = useState<VoiceDetectorEvent | null>(null);
+  const [lastEvent, setLastEvent] = useState<UseVoiceDetectorResult['lastEvent']>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastPeakDbfs, setLastPeakDbfs] = useState<number | null>(null);
-  const onSOSTriggeredRef = useRef(onSOSTriggered);
 
-  useEffect(() => {
-    onSOSTriggeredRef.current = onSOSTriggered;
-  }, [onSOSTriggered]);
+  const triggerRef = useRef(onTrigger);
+  const optRef = useRef(options);
+  useEffect(() => { triggerRef.current = onTrigger; optRef.current = options; });
 
   useEffect(() => {
     if (!enabled) {
+      voiceBus.set({ engine: 'off', level: 0, error: null, dryRun: false });
       setIsListening(false);
       return undefined;
     }
 
     let cancelled = false;
-    let activeRecording: Audio.Recording | null = null;
+    let currentLocale: VoiceLocale = locale;
+    let restartTimer: ReturnType<typeof setTimeout> | undefined;
+    let lastActivity = Date.now();
+    let lastFire = 0;
+    let lastScream = 0;
+    let loudSince = 0;
+    let restarts = 0;
+    let errorsInRow = 0;
+    let fatal = false;
+    const subs: { remove: () => void }[] = [];
 
-    async function requestPermissionAndMode(): Promise<void> {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        throw new Error('Microphone permission is required for voice detection.');
-      }
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
+    const publishError = (msg: string | null, engine?: 'error' | 'unavailable') => {
+      setError(msg);
+      voiceBus.set({ error: msg, ...(engine ? { engine } : {}) });
+    };
+
+    const fire = (match: KeywordMatch | null, transcript: string, extra: Partial<VoiceTriggerEvent> = {}) => {
+      const now = Date.now();
+      if (match) voiceBus.set({ lastMatch: { ...match, at: now, transcript } });
+      const isScream = extra.source === 'tone';
+      if (now - lastFire < TRIGGER_COOLDOWN_MS) return;
+      if (isScream && now - lastScream < SCREAM_COOLDOWN_MS) return;
+      lastFire = now;
+      if (isScream) lastScream = now;
+      setLastEvent({ keyword: match?.keyword ?? 'none', screamProbability: extra.screamScore ?? 0, at: new Date(now) });
+      if (optRef.current.dryRun) return;
+      triggerRef.current({
+        keyword: match?.keyword ?? 'none',
+        strength: match?.strength ?? 'weak',
+        transcript,
+        language: LANGUAGE_FOR_LOCALE[currentLocale],
+        confidence: match ? (match.strength === 'strong' ? 0.9 : 0.6) : 0.6,
+        source: 'voice_keyword',
+        ...extra,
       });
-    }
+    };
 
-    async function recordOneSegment(): Promise<{ uri: string | null; peakDbfs: number }> {
-      let peakDbfs = -160;
-      const recording = new Audio.Recording();
-      activeRecording = recording;
+    const scheduleRestart = (delayMs: number) => {
+      if (cancelled || fatal) return;
+      if (restartTimer) clearTimeout(restartTimer);
+      voiceBus.set({ engine: 'restarting' });
+      setIsListening(false);
+      restartTimer = setTimeout(() => void start(), delayMs);
+    };
 
-      await recording.prepareToRecordAsync(RECORDING_OPTIONS);
-      // Explicit, short polling interval — without this, metering updates
-      // ride on expo-av's default interval, which isn't guaranteed frequent
-      // enough to catch a brief spoken word inside a 4s segment. This was
-      // the most likely reason peakDbfs could sit at -160 (its initial
-      // value) for an entire segment even while you were speaking.
-      await recording.setProgressUpdateInterval(150);
-      recording.setOnRecordingStatusUpdate((status) => {
-        if (typeof status.metering === 'number' && status.metering > peakDbfs) {
-          peakDbfs = status.metering;
-        }
-      });
-      await recording.startAsync();
-      await new Promise((resolve) => setTimeout(resolve, SEGMENT_DURATION_MS));
-
-      if (cancelled) {
-        return { uri: null, peakDbfs };
-      }
-      await recording.stopAndUnloadAsync();
-      activeRecording = null;
-      return { uri: recording.getURI(), peakDbfs };
-    }
-
-    async function loop(): Promise<void> {
-      try {
-        await requestPermissionAndMode();
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not start voice detection');
+    const start = async () => {
+      if (cancelled || fatal) return;
+      if (!SPEECH_AVAILABLE) {
+        fatal = true;
+        publishError(NEEDS_DEV_BUILD_MESSAGE, 'unavailable');
         return;
       }
-
-      setIsListening(true);
-      setError(null);
-
-      while (!cancelled) {
-        let uri: string | null = null;
-        let peakDbfs = -160;
-        try {
-          ({ uri, peakDbfs } = await recordOneSegment());
-        } catch {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          continue;
-        }
-
-        if (cancelled || !uri) continue;
-
-        setLastPeakDbfs(peakDbfs);
-
-        if (peakDbfs < METERING_TRIGGER_DBFS) {
-          await FileSystem.deleteAsync(uri, { idempotent: true });
-          continue;
-        }
-
-        try {
-          const [location, batteryLevel] = await Promise.all([getCurrentGeoPoint(), getBatteryLevelPercent()]);
-          const { voiceLog, sosTriggered } = await submitVoiceLog({ fileUri: uri, language, location, batteryLevel });
-          setError(null);
-          setLastEvent({
-            keyword: voiceLog.detectedKeyword,
-            screamProbability: voiceLog.toneAnalysis.screamProbability,
-            at: new Date(),
-          });
-          if (sosTriggered) onSOSTriggeredRef.current();
-        } catch (err) {
-          // Previously silent — a failed upload (network error, backend
-          // down, AI service unreachable) looked identical to "nothing
-          // loud enough happened yet." Surfacing it doesn't stop the loop
-          // (the next segment still retries), but now it's visible instead
-          // of an invisible dead end.
-          setError(err instanceof Error ? `Voice log upload failed: ${err.message}` : 'Voice log upload failed.');
-        } finally {
-          await FileSystem.deleteAsync(uri, { idempotent: true });
-        }
+      if (AppState.currentState !== 'active') {
+        // Phones don't let apps use the mic in the background without a foreground service; resume on return.
+        voiceBus.set({ engine: 'restarting' });
+        return;
       }
-    }
+      try {
+        voiceBus.set({ engine: 'starting', locale: currentLocale, dryRun: optRef.current.dryRun });
+        const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        if (!perm.granted) {
+          fatal = true;
+          publishError('Microphone / speech permission is off. Enable it in phone Settings → Apps → SafeSathi → Permissions.', 'error');
+          return;
+        }
+        if (!ExpoSpeechRecognitionModule.isRecognitionAvailable()) {
+          fatal = true;
+          publishError('This phone has no speech-recognition service. Install or enable "Speech Services by Google" (Android) and try again.', 'unavailable');
+          return;
+        }
+        let onDevice = false;
+        try {
+          if (ExpoSpeechRecognitionModule.supportsOnDeviceRecognition()) {
+            const { installedLocales } = await ExpoSpeechRecognitionModule.getSupportedLocales({});
+            onDevice = installedLocales.some((l) => l.toLowerCase() === currentLocale.toLowerCase());
+          }
+        } catch { onDevice = false; }
+        voiceBus.set({ onDevice });
 
-    void loop();
+        ExpoSpeechRecognitionModule.start({
+          lang: currentLocale,
+          interimResults: true,
+          continuous: true,
+          maxAlternatives: 3,
+          contextualStrings: CONTEXTUAL_HINTS,
+          requiresOnDeviceRecognition: onDevice,
+          volumeChangeEventOptions: { enabled: true, intervalMillis: 150 },
+        });
+      } catch (e) {
+        errorsInRow += 1;
+        publishError(`Could not start listening: ${e instanceof Error ? e.message : String(e)}`);
+        scheduleRestart(Math.min(10000, 1000 * errorsInRow));
+      }
+    };
+
+    subs.push(
+      addSpeechRecognitionListener('start', () => {
+        lastActivity = Date.now();
+        setIsListening(true);
+        publishError(null);
+        voiceBus.set({ engine: 'listening' });
+        setTimeout(() => { if (!cancelled) errorsInRow = 0; }, 4000);
+      }),
+      addSpeechRecognitionListener('end', () => {
+        lastActivity = Date.now();
+        restarts += 1;
+        voiceBus.set({ restarts });
+        scheduleRestart(errorsInRow > 0 ? Math.min(8000, 800 * errorsInRow) : 250);
+      }),
+      addSpeechRecognitionListener('error', (ev) => {
+        lastActivity = Date.now();
+        const code = String(ev.error);
+        if (code === 'no-speech' || code === 'speech-timeout' || code === 'aborted') return; // normal; 'end' restarts
+        errorsInRow += 1;
+        if (code === 'not-allowed') {
+          fatal = true;
+          publishError('Microphone / speech permission was denied. Enable it in phone Settings → Apps → SafeSathi → Permissions.', 'error');
+        } else if (code === 'service-not-allowed') {
+          fatal = true;
+          publishError('The phone blocked speech recognition. Check that "Speech Services by Google" is enabled and not restricted.', 'unavailable');
+        } else if (code === 'language-not-supported') {
+          if (currentLocale !== 'en-IN') {
+            currentLocale = 'en-IN';
+            publishError('Your language pack is not installed — listening in English instead.');
+          } else {
+            fatal = true;
+            publishError('English speech recognition is not available on this phone.', 'unavailable');
+          }
+        } else if (code === 'network') {
+          publishError('Speech recognition needs internet (or an offline language pack). Retrying…');
+        } else if (code !== 'busy') {
+          publishError(`Voice engine error: ${code}${ev.message ? ` — ${ev.message}` : ''}`);
+        }
+      }),
+      addSpeechRecognitionListener('result', (ev) => {
+        lastActivity = Date.now();
+        const alts = ev.results?.length ? ev.results : [];
+        if (alts[0]) voiceBus.set({ transcript: alts[0].transcript });
+        for (const alt of alts) {
+          const m = matchKeywords(alt.transcript, optRef.current.customSafeWord);
+          if (m) { fire(m, alt.transcript); break; }
+        }
+      }),
+      addSpeechRecognitionListener('volumechange', (ev) => {
+        lastActivity = Date.now();
+        const level = Math.max(0, Math.min(1, (ev.value + 2) / 12));
+        voiceBus.set({ level });
+        const now = Date.now();
+        if (level >= SCREAM_LEVEL) {
+          if (!loudSince) loudSince = now;
+          if (optRef.current.screamByVolume && now - loudSince >= SCREAM_HOLD_MS) {
+            loudSince = 0;
+            fire(null, 'loud sustained sound', { source: 'tone', screamScore: 0.6 });
+          }
+        } else loudSince = 0;
+      })
+    );
+
+    // Watchdog: if the recogniser goes quiet (no start/result/volume events) it has silently stalled.
+    const watchdog = setInterval(() => {
+      if (cancelled || fatal || AppState.currentState !== 'active') return;
+      if (Date.now() - lastActivity > STALL_MS) {
+        lastActivity = Date.now();
+        try { ExpoSpeechRecognitionModule.abort(); } catch { /* ignore */ }
+        scheduleRestart(500);
+      }
+    }, 10000);
+
+    const appSub = AppState.addEventListener('change', (s) => {
+      if (s === 'active' && !fatal) {
+        lastActivity = Date.now();
+        scheduleRestart(300);
+      } else if (s !== 'active') {
+        setIsListening(false);
+        voiceBus.set({ engine: 'restarting' });
+      }
+    });
+
+    void start();
 
     return () => {
       cancelled = true;
-      if (activeRecording) {
-        activeRecording.stopAndUnloadAsync().catch(() => undefined);
-      }
+      if (restartTimer) clearTimeout(restartTimer);
+      clearInterval(watchdog);
+      appSub.remove();
+      subs.forEach((s) => s.remove());
+      try { ExpoSpeechRecognitionModule.abort(); } catch { /* ignore */ }
+      voiceBus.set({ engine: 'off', level: 0, dryRun: false });
       setIsListening(false);
     };
-  }, [enabled, language]);
+  }, [enabled, locale, options.dryRun]);
 
-  return { isListening, lastEvent, error, lastPeakDbfs };
+  return { isListening, lastEvent, error };
 }

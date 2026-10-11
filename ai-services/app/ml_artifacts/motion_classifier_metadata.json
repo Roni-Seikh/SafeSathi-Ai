@@ -1,31 +1,75 @@
 {
+  "model_name": "Hist Gradient Boosting + isotonic calibration",
   "feature_names": [
     "accel_mean",
     "accel_peak",
     "accel_variance",
-    "accel_peak_to_mean",
     "gyro_mean",
     "gyro_peak",
     "gyro_variance",
-    "gyro_peak_to_mean"
+    "accel_std",
+    "gyro_std",
+    "accel_peak_to_mean",
+    "gyro_peak_to_mean",
+    "accel_dyn_range",
+    "accel_excess_g",
+    "gyro_to_accel_peak",
+    "log_accel_var",
+    "log_gyro_var"
+  ],
+  "base_features": [
+    "accel_mean",
+    "accel_peak",
+    "accel_variance",
+    "gyro_mean",
+    "gyro_peak",
+    "gyro_variance"
   ],
   "class_labels": [
+    "abrupt_motion",
     "normal",
     "running",
-    "phone_snatch",
-    "violent_movement",
     "sudden_fall"
   ],
-  "trained_on": "data/motion_training_data.csv",
-  "samples_per_class": 600,
-  "test_accuracy": 0.96,
-  "cv_accuracy_mean": 0.9706666666666667,
-  "cv_accuracy_std": 0.002260776661041769,
-  "per_class_f1": {
-    "normal": 1.0,
-    "running": 0.9915966386554622,
-    "phone_snatch": 0.9411764705882353,
-    "violent_movement": 0.9173553719008265,
-    "sudden_fall": 0.9504132231404959
-  }
+  "serving_map": {
+    "abrupt_motion": "normal"
+  },
+  "trained_on": "SisFall (Sucerquia et al., Sensors 2017) \u2014 real accelerometer+gyroscope recordings",
+  "dataset": {
+    "source": "https://github.com/Fall-Prevention-Team/sisfallData",
+    "subjects": 23,
+    "trials_used": 2155,
+    "windows": 32864,
+    "resampled_hz": 10,
+    "window_s": 2,
+    "stride_s": 1
+  },
+  "evaluation": {
+    "protocol": "5 unseen volunteers (GroupShuffleSplit); CV is GroupKFold by volunteer",
+    "test_accuracy": 0.96375,
+    "test_macro_f1": 0.865588647291696,
+    "test_balanced_accuracy": 0.864428430209569,
+    "per_class_f1": {
+      "normal": 0.9787196153503696,
+      "running": 0.9153846153846154,
+      "abrupt_motion": 0.6017699115044248,
+      "sudden_fall": 0.9664804469273743
+    },
+    "fall_recall_at_0.8": 0.8633333333333333,
+    "fall_precision_at_0.8": 0.9961538461538462,
+    "cv_macro_f1_by_model": {
+      "Dummy (majority)": 0.2189014028775058,
+      "Logistic Regression": 0.8113838785204888,
+      "k-Nearest Neighbours": 0.8508488460272327,
+      "Random Forest": 0.8590555885205374,
+      "Hist Gradient Boosting": 0.855440228101789
+    }
+  },
+  "sklearn_version": "1.8.0",
+  "numpy_version": "2.4.4",
+  "limitations": [
+    "Sensor worn at waist in SisFall; phones are hand/pocket/bag carried (magnitude features are orientation-free but placement still matters).",
+    "No public data for phone-snatch or struggle: those event types are heuristic + log-only in the service.",
+    "SisFall volunteers are 19-30 y/o adults for the falls; re-validate with your own labelled app data."
+  ]
 }

@@ -59,7 +59,19 @@
           "icon": "./src/assets/notification-icon.png",
           "color": "#6C7BFF"
         }
-      ]
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "SafeSathi listens for emergency words like \"Help\" or \"Bachao\" so it can raise an SOS hands-free.",
+          "speechRecognitionPermission": "SafeSathi uses speech recognition on your phone to detect emergency words like \"Help\" or \"Bachao\".",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.tts"
+          ]
+        }
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "defaultVoiceDetectionEnabled": false,

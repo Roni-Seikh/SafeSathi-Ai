@@ -9,6 +9,8 @@ import { UsersPage } from '@/pages/UsersPage';
 import { HeatmapPage } from '@/pages/HeatmapPage';
 import { ExportPage } from '@/pages/ExportPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { InsightsPage } from '@/pages/InsightsPage';
+import '@/lib/theme'; // applies the saved light/dark theme before first paint
 
 export function App() {
   return (
@@ -19,6 +21,7 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
             <Route path="/sos" element={<SOSMonitorPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/users" element={<UsersPage />} />

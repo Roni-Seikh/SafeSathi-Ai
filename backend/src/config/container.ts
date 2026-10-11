@@ -28,6 +28,11 @@ import { AdminUserService } from '../services/adminUser.service';
 import { AdminReportService } from '../services/adminReport.service';
 import { AdminSOSService } from '../services/adminSOS.service';
 import { AdminExportService } from '../services/adminExport.service';
+import { EvidenceService } from '../services/evidence.service';
+import { JourneyService } from '../services/journey.service';
+import { ChatService } from '../services/chat.service';
+import { SafetyService } from '../services/safety.service';
+import { AdminInsightsService } from '../services/adminInsights.service';
 
 /**
  * Composition root: every service is constructed exactly once here, with
@@ -63,3 +68,10 @@ export const adminUserService = new AdminUserService(userRepository);
 export const adminReportService = new AdminReportService(reportRepository);
 export const adminSOSService = new AdminSOSService(sosLogRepository);
 export const adminExportService = new AdminExportService(userRepository, reportRepository, sosLogRepository);
+
+// --- SafeSathi v2 additions: Evidence Vault, Guardian Journey, Sathi AI chat, live SafeScore, admin intelligence
+export const evidenceService = new EvidenceService();
+export const journeyService = new JourneyService(emergencyContactRepository, userRepository, notificationService, sosService);
+export const chatService = new ChatService();
+export const safetyService = new SafetyService(geoRiskFactorService);
+export const adminInsightsService = new AdminInsightsService();

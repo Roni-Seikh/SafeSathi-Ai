@@ -28,6 +28,18 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default(''),
 
   LOG_LEVEL: z.string().default('debug'),
+
+  // --- Optional: Sathi AI chatbot. With no key the bot still answers from its built-in
+  // women-safety knowledge base; with a key it also generates grounded free-form replies.
+  ANTHROPIC_API_KEY: z.string().optional(),
+  CHAT_MODEL: z.string().default('claude-haiku-4-5-20251001'),
+
+  // --- Optional: AI annotation (scream score / keyword) of each evidence chunk. Needs the AI service.
+  EVIDENCE_AI_ANALYSIS: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
+
+  // Guardian Journey watchdog tick (ms) and how long the user has to answer the "are you OK?" push.
+  JOURNEY_WATCHDOG_MS: z.coerce.number().default(30000),
+  JOURNEY_PROMPT_TIMEOUT_MS: z.coerce.number().default(120000),
 });
 
 export type Env = z.infer<typeof envSchema>;

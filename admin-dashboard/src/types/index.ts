@@ -93,7 +93,7 @@ export interface AdminReport {
   createdAt: string;
 }
 
-export type SOSTriggerType = 'manual' | 'voice_keyword' | 'motion' | 'tone' | 'admin';
+export type SOSTriggerType = 'manual' | 'voice_keyword' | 'motion' | 'tone' | 'admin' | 'journey' | 'shake';
 export type SOSStatus = 'active' | 'resolved' | 'false_alarm' | 'cancelled';
 
 export interface AdminSOSLog {
@@ -108,6 +108,7 @@ export interface AdminSOSLog {
   triggeredAt: string;
   resolvedAt?: string;
   resolvedBy?: 'user' | 'contact' | 'admin' | 'auto_timeout';
+  duress?: boolean;
 }
 
 export type RiskLevel = 'green' | 'yellow' | 'red';

@@ -12,6 +12,10 @@ import communityRoutes from '../community.routes';
 import routeRoutes from '../route.routes';
 import heatmapRoutes from '../heatmap.routes';
 import adminRoutes from '../admin.routes';
+import evidenceRoutes from '../evidence.routes';
+import journeyRoutes from '../journey.routes';
+import chatRoutes from '../chat.routes';
+import safetyRoutes from '../safety.routes';
 import { sendSuccess } from '../../utils/apiResponse';
 
 const router = Router();
@@ -36,6 +40,10 @@ router.use('/community', communityRoutes);
 router.use('/routes', routeRoutes);
 router.use('/heatmap', heatmapRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/evidence', evidenceRoutes);
+router.use('/journeys', journeyRoutes);
+router.use('/chat', chatRoutes);
+router.use('/safety', safetyRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

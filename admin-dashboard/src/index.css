@@ -2,46 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------- design tokens (light / dark) ---------- */
+:root {
+  --paper: #f6f7f9; --surface: #ffffff; --surface-2: #f1f3f7; --line: #e3e7ed; --ink: #0a1420; --muted: #5b6472;
+  --grid-cell-0: #eef1f6;
+}
+.dark {
+  --paper: #0b1019; --surface: #121a27; --surface-2: #182233; --line: #243247; --ink: #e8ecf4; --muted: #9aa6b8;
+  --grid-cell-0: #172131;
+  color-scheme: dark;
+}
+
 @layer base {
-  html {
-    -webkit-font-smoothing: antialiased;
-  }
-  body {
-    @apply bg-paper text-ink-900 font-sans;
-  }
-  ::selection {
-    @apply bg-signal-blueDim;
-  }
-  :focus-visible {
-    outline: 2px solid #1E5FA8;
-    outline-offset: 2px;
-  }
+  html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+  body { @apply bg-paper text-ink-900 font-sans transition-colors duration-300; }
+  ::selection { @apply bg-signal-blueDim; }
+  :focus-visible { outline: 2px solid #5b6cff; outline-offset: 2px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; border: 2px solid var(--paper); }
 }
 
 @layer components {
-  .field-label {
-    @apply block text-[13px] font-medium text-slate-muted mb-1.5;
-  }
-  .field-input {
-    @apply w-full rounded-md border border-line bg-white px-3 py-2 text-[14px] text-ink-900
-      placeholder:text-slate-muted/70 focus:border-ink-600 focus:ring-1 focus:ring-ink-600
-      disabled:bg-paper disabled:text-slate-muted transition-colors;
-  }
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-ink-800 px-4 py-2
-      text-[14px] font-medium text-white hover:bg-ink-700 disabled:opacity-40
-      disabled:cursor-not-allowed transition-colors;
-  }
-  .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-4 py-2
-      text-[14px] font-medium text-ink-900 hover:bg-paper disabled:opacity-40
-      disabled:cursor-not-allowed transition-colors;
-  }
-  .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-signal-red px-4 py-2
-      text-[14px] font-medium text-white hover:bg-signal-red/90 disabled:opacity-40 transition-colors;
-  }
-  .panel {
-    @apply rounded-lg border border-line bg-white shadow-panel;
-  }
+  .field-label { @apply block text-[13px] font-medium text-slate-muted mb-1.5; }
+  .field-input { @apply w-full rounded-md border border-line bg-white px-3 py-2 text-[14px] text-ink-900 placeholder:text-slate-muted/70 focus:border-accent focus:ring-1 focus:ring-accent disabled:bg-paper disabled:text-slate-muted transition-colors; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-md bg-ink-800 px-4 py-2 text-[14px] font-medium text-white hover:bg-ink-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[.98]; }
+  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-4 py-2 text-[14px] font-medium text-ink-900 hover:bg-paper disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[.98]; }
+  .btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-md bg-signal-red px-4 py-2 text-[14px] font-medium text-white hover:bg-signal-red/90 disabled:opacity-40 transition-all active:scale-[.98]; }
+  .panel { @apply rounded-lg border border-line bg-white shadow-panel; }
+  /* interactive card: lifts and glows on hover */
+  .card-hover { @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift; }
+  .skeleton { background: linear-gradient(90deg, var(--surface-2) 25%, var(--line) 37%, var(--surface-2) 63%); background-size: 800px 100%; @apply animate-shimmer rounded-md; }
+  .text-gradient { background: linear-gradient(90deg, #5b6cff, #33d6b0, #5b6cff); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; @apply animate-grad-x; }
+  .stagger > * { animation: fade-up .5s cubic-bezier(.2,.8,.2,1) both; }
+  .stagger > *:nth-child(1) { animation-delay: .02s } .stagger > *:nth-child(2) { animation-delay: .07s }
+  .stagger > *:nth-child(3) { animation-delay: .12s } .stagger > *:nth-child(4) { animation-delay: .17s }
+  .stagger > *:nth-child(5) { animation-delay: .22s } .stagger > *:nth-child(6) { animation-delay: .27s }
 }
+
+/* translucent top bar that follows the theme */
+.topbar { background-color: color-mix(in srgb, var(--surface) 82%, transparent); }
+
+/* ---------- dark-mode overrides so EVERY existing page follows the theme ---------- */
+.dark .bg-white, .dark .panel, .dark .field-input, .dark .btn-secondary { background-color: var(--surface); }
+.dark .bg-paper, .dark body { background-color: var(--paper); }
+.dark .hover\:bg-paper:hover, .dark .hover\:bg-paper\/60:hover, .dark .btn-secondary:hover { background-color: var(--surface-2); }
+.dark .bg-paper\/60 { background-color: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+.dark .border-line, .dark .panel, .dark .field-input, .dark .btn-secondary { border-color: var(--line); }
+.dark .bg-line { background-color: var(--line); }
+.dark .text-ink-900, .dark .text-ink-800 { color: var(--ink); }
+.dark .text-slate-muted { color: var(--muted); }
+.dark .btn-primary { background-color: #5b6cff; }
+.dark .btn-primary:hover { background-color: #7483ff; }
+.dark .bg-ink-800.text-white { background-color: #5b6cff; }
+.dark .bg-signal-redDim { background-color: rgba(214,64,47,.18); }
+.dark .bg-signal-amberDim { background-color: rgba(201,122,31,.2); }
+.dark .bg-signal-greenDim { background-color: rgba(31,138,87,.22); }
+.dark .bg-signal-blueDim { background-color: rgba(91,108,255,.2); }
+.dark .text-signal-blue { color: #8ea2ff; }
+.dark .recharts-cartesian-grid line { stroke: var(--line); }
+.dark .recharts-text { fill: var(--muted); }
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip { background-color: var(--surface) !important; border-color: var(--line) !important; }
+.dark .divide-line > :not([hidden]) ~ :not([hidden]) { border-color: var(--line); }

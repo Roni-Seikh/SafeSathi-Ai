@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { MapPin, RotateCw } from 'lucide-react';
+import { MapPin, RotateCw, Archive } from 'lucide-react';
 import * as sosService from '@/services/sos.service';
 import type { AdminSOSLog, SOSStatus, PageMeta } from '@/types';
 import { SOS_STATUS_LABEL, SOS_TRIGGER_LABEL } from '@/constants';
@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { StatusPill } from '@/components/common/StatusPill';
 import { Pagination } from '@/components/common/Pagination';
 import { MapPreviewModal } from '@/components/common/MapPreviewModal';
+import { EvidenceModal } from '@/components/common/EvidenceModal';
 import { useToast } from '@/hooks/useToast';
 import { getApiErrorMessage } from '@/services/apiClient';
 
@@ -44,6 +45,7 @@ export function SOSMonitorPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [mapTarget, setMapTarget] = useState<AdminSOSLog | null>(null);
+  const [evidenceFor, setEvidenceFor] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const toast = useToast();
 
@@ -91,7 +93,7 @@ export function SOSMonitorPage() {
                 setPage(1);
               }}
               className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                status === tab.value ? 'bg-ink-800 text-white' : 'bg-white text-slate-muted border border-line hover:bg-paper'
+                status === tab.value ? 'bg-ink-800 text-white shadow-sm' : 'bg-white text-slate-muted border border-line hover:bg-paper'
               }`}
             >
               {tab.label}
@@ -126,6 +128,7 @@ export function SOSMonitorPage() {
                   <th className="px-4 py-2.5 font-medium">Status</th>
                   <th className="px-4 py-2.5 font-medium">Battery</th>
                   <th className="px-4 py-2.5 font-medium">Location</th>
+                  <th className="px-4 py-2.5 font-medium">Evidence</th>
                   <th className="px-4 py-2.5 font-medium">Resolved</th>
                 </tr>
               </thead>
@@ -134,7 +137,10 @@ export function SOSMonitorPage() {
                   <tr key={log._id} className="border-b border-line last:border-0 hover:bg-paper/60">
                     <td className="px-4 py-2.5 whitespace-nowrap">{formatDateTime(log.triggeredAt)}</td>
                     <td className="px-4 py-2.5 font-mono text-[12.5px] text-slate-muted">{log.userId.slice(-8)}</td>
-                    <td className="px-4 py-2.5">{SOS_TRIGGER_LABEL[log.triggerType] ?? log.triggerType}</td>
+                    <td className="px-4 py-2.5">
+                      {SOS_TRIGGER_LABEL[log.triggerType] ?? log.triggerType}
+                      {log.duress && <span className="ml-2 rounded bg-signal-red px-1.5 py-0.5 text-[10.5px] font-bold text-white" title="User entered the duress PIN — may be under coercion">DURESS</span>}
+                    </td>
                     <td className="px-4 py-2.5">
                       <StatusPill label={SOS_STATUS_LABEL[log.status] ?? log.status} tone={statusTone(log.status)} />
                     </td>
@@ -147,6 +153,9 @@ export function SOSMonitorPage() {
                         <MapPin size={14} /> View
                       </button>
                     </td>
+                    <td className="px-4 py-2.5">
+                      <button onClick={() => setEvidenceFor(log._id)} className="flex items-center gap-1 text-accent hover:underline"><Archive size={14} /> Vault</button>
+                    </td>
                     <td className="px-4 py-2.5 text-slate-muted">
                       {log.resolvedAt ? formatDateTime(log.resolvedAt) : '—'}
                     </td>
@@ -158,6 +167,8 @@ export function SOSMonitorPage() {
         )}
         {meta && meta.total > 0 && <Pagination meta={meta} onPageChange={setPage} />}
       </div>
+
+      {evidenceFor && <EvidenceModal sosId={evidenceFor} onClose={() => setEvidenceFor(null)} />}
 
       {mapTarget && (
         <MapPreviewModal
